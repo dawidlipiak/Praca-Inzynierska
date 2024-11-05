@@ -28,7 +28,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_customhid.h"
-#include "TMC4671_controller.hpp"
 
 /* USER CODE BEGIN INCLUDE */
 

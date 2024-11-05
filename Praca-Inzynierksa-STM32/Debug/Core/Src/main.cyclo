@@ -1,3 +1,18 @@
-../Core/Src/main.cpp:66:5:int main()	1
-../Core/Src/main.cpp:119:6:void SystemClock_Config()	3
-../Core/Src/main.cpp:168:6:void Error_Handler()	1
+../Core/Inc/TMC4671_API.h:20:24:tmc4671_fieldExtract	2
+../Core/Inc/TMC4671_API.h:34:24:tmc4671_fieldRead	1
+../Core/Inc/util_functions.h:11:9:tmc_filterPT1	2
+../Core/Inc/util_functions.h:17:10:limitU32	3
+../Core/Inc/util_functions.h:27:9:limitS64	3
+../Core/Inc/util_functions.h:58:9:sqrt_int	15
+../Core/Inc/TMC4671_controller.h:66:13:TMC4671_controller_enableDriver	2
+../Core/Inc/TMC4671_controller.h:76:6:TMC4671_controller_init	1
+../Core/Inc/TMC4671_controller.h:130:6:TMC4671_controller_deInit	1
+../Core/Inc/TMC4671_controller.h:134:10:TMC4671_controller_rotate	1
+../Core/Inc/TMC4671_controller.h:147:10:TMC4671_controller_moveTo	1
+../Core/Inc/TMC4671_controller.h:164:10:TMC4671_controller_moveBy	1
+../Core/Inc/TMC4671_controller.h:182:9:TMC4671_controller_positionReached	2
+../Core/Inc/TMC4671_controller.h:192:6:TMC4671_controller_periodicJob	14
+../Core/Src/main.c:68:5:main	1
+../Core/Src/main.c:123:6:SystemClock_Config	3
+../Core/Src/main.c:165:6:HAL_TIM_PeriodElapsedCallback	2
+../Core/Src/main.c:178:6:Error_Handler	1

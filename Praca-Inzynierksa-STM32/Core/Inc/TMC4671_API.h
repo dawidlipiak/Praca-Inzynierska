@@ -17,14 +17,6 @@
 int32_t tmc4671_readRegister(uint8_t address);
 void tmc4671_writeRegister(uint8_t address, int32_t value);
 
-typedef struct
-{
-    uint32_t mask;
-    uint8_t shift;
-    uint8_t address;
-    bool isSigned;
-} RegisterField;
-
 static inline uint32_t tmc4671_fieldExtract(uint32_t data, RegisterField field)
 {
     uint32_t value = (data & field.mask) >> field.shift;
@@ -58,9 +50,9 @@ static inline void tmc4671_fieldWrite(RegisterField field, uint32_t value)
 }
 
 // Do cyclic tasks
-void tmc4671_periodicJob(uint32_t actualSystick, uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
-    int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
-    uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT);
+void tmc4671_periodicJob(uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
+                         int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
+                         uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT);
 
 // Encoder initialization functions
 void tmc4671_startEncoderInitialization(uint8_t mode, uint8_t *initMode, uint8_t *initState);

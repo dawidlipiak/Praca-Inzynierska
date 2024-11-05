@@ -384,39 +384,30 @@ void tmc4671_doEncoderInitializationMode3(uint8_t *initState, uint16_t initWaitT
 }
 
 
-void tmc4671_checkEncderInitialization(uint32_t actualSystick, uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
-		int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
-		uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT)
+void tmc4671_checkEncderInitialization(uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
+                                       int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
+                                       uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT)
 {
-	// use the systick as 1ms timer for encoder initialization
-	static uint32_t lastSystick = 0;
-	if(actualSystick != lastSystick)
-	{
-		// needs timer to use the wait time
-		if(initMode == 0)
-		{
-			tmc4671_doEncoderInitializationMode0(initState, initWaitTime, actualInitWaitTime, startVoltage, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
-		}
-		else if (initMode == 3)	// analog encoder initialization
-		{
-			tmc4671_doEncoderInitializationMode3(initState, initWaitTime, actualInitWaitTime, startVoltage, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
-		}
-		lastSystick = actualSystick;
-	}
+    // Realizowanie inicjalizacji enkodera w zależności od trybu
+    if (initMode == 0) {
+        tmc4671_doEncoderInitializationMode0(initState, initWaitTime, actualInitWaitTime, startVoltage, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
+    }
+    else if (initMode == 3) { // analog encoder initialization
+        tmc4671_doEncoderInitializationMode3(initState, initWaitTime, actualInitWaitTime, startVoltage, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
+    }
 
-	// needs no timer
-	if(initMode == 2)
-	{
-		tmc4671_doEncoderInitializationMode2(initState, actualInitWaitTime, hall_phi_e_old, hall_phi_e_new, hall_actual_coarse_offset, last_Phi_E_Selection);
-	}
+    // Tryb bez konieczności timera
+    if (initMode == 2) {
+        tmc4671_doEncoderInitializationMode2(initState, actualInitWaitTime, hall_phi_e_old, hall_phi_e_new, hall_actual_coarse_offset, last_Phi_E_Selection);
+    }
 }
 
-void tmc4671_periodicJob(uint32_t actualSystick, uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
-		int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
-		uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT)
+void tmc4671_periodicJob(uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,
+                         int16_t *hall_phi_e_old, int16_t *hall_phi_e_new, int16_t *hall_actual_coarse_offset,
+                         uint16_t *last_Phi_E_Selection, uint32_t *last_UQ_UD_EXT, int16_t *last_PHI_E_EXT)
 {
-	tmc4671_checkEncderInitialization(actualSystick, initMode, initState, initWaitTime, actualInitWaitTime, startVoltage,
-			hall_phi_e_old, hall_phi_e_new, hall_actual_coarse_offset, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
+    tmc4671_checkEncderInitialization(initMode, initState, initWaitTime, actualInitWaitTime, startVoltage,
+                                      hall_phi_e_old, hall_phi_e_new, hall_actual_coarse_offset, last_Phi_E_Selection, last_UQ_UD_EXT, last_PHI_E_EXT);
 }
 
 void tmc4671_startEncoderInitialization(uint8_t mode, uint8_t *initMode, uint8_t *initState)

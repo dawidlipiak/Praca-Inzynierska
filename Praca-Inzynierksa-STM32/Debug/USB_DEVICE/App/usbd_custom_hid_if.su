@@ -1,3 +1,17 @@
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:166:15:int8_t CUSTOM_HID_Init_FS()	4	static
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:177:15:int8_t CUSTOM_HID_DeInit_FS()	4	static
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:190:15:int8_t CUSTOM_HID_OutEvent_FS(uint8_t*)	16	static
+../Core/Inc/TMC4671_API.h:20:24:tmc4671_fieldExtract	40	static
+../Core/Inc/TMC4671_API.h:34:24:tmc4671_fieldRead	24	static
+../Core/Inc/util_functions.h:11:9:tmc_filterPT1	48	static
+../Core/Inc/util_functions.h:17:10:limitU32	24	static
+../Core/Inc/util_functions.h:27:9:limitS64	24	static
+../Core/Inc/util_functions.h:58:9:sqrt_int	24	static
+../Core/Inc/TMC4671_controller.h:66:13:TMC4671_controller_enableDriver	16	static
+../Core/Inc/TMC4671_controller.h:76:6:TMC4671_controller_init	8	static
+../Core/Inc/TMC4671_controller.h:130:6:TMC4671_controller_deInit	8	static
+../Core/Inc/TMC4671_controller.h:134:10:TMC4671_controller_rotate	16	static
+../Core/Inc/TMC4671_controller.h:147:10:TMC4671_controller_moveTo	16	static
+../Core/Inc/TMC4671_controller.h:164:10:TMC4671_controller_moveBy	24	static
+../Core/Inc/TMC4671_controller.h:182:9:TMC4671_controller_positionReached	24	static
+../Core/Inc/TMC4671_controller.h:192:6:TMC4671_controller_periodicJob	56	static
+../USB_DEVICE/App/usbd_custom_hid_if.c:166:15:CUSTOM_HID_Init_FS	4	static
+../USB_DEVICE/App/usbd_custom_hid_if.c:177:15:CUSTOM_HID_DeInit_FS	4	static
+../USB_DEVICE/App/usbd_custom_hid_if.c:190:15:CUSTOM_HID_OutEvent_FS	16	static

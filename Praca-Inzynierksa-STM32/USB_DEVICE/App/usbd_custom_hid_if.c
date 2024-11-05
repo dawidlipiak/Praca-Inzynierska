@@ -22,7 +22,7 @@
 #include "usbd_custom_hid_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "TMC4671_controller.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -216,6 +216,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 	  else {
 	    	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 	  }
+	  TMC4671_controller_rotate(-50);
   }
   else if (report_buffer[0] == 0x02)  // Zakładamy, że 0x02 to komenda dla obrotu w prawo
   {
@@ -226,6 +227,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 	  else {
 	    	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
 	  }
+	  TMC4671_controller_rotate(50);
   }
 
 //  buffer[0] = 0x01;

@@ -1,5 +1,5 @@
 USB_DEVICE/App/usbd_custom_hid_if.o: \
- ../USB_DEVICE/App/usbd_custom_hid_if.cpp \
+ ../USB_DEVICE/App/usbd_custom_hid_if.c \
  ../USB_DEVICE/App/usbd_custom_hid_if.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
@@ -31,15 +31,17 @@ USB_DEVICE/App/usbd_custom_hid_if.o: \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
- ../Core/Inc/TMC4671_controller.hpp ../Core/Inc/TMC4671_API.h \
+ ../Core/Inc/TMC4671_controller.h ../Core/Inc/TMC4671_API.h \
  ../Core/Inc/TMC4671_HW_Abstraction.h ../Core/Inc/gpio.h \
- ../Core/Inc/main.h ../Core/Inc/LinearRamp.h
+ ../Core/Inc/main.h ../Core/Inc/LinearRamp.h ../Core/Inc/util_functions.h
 ../USB_DEVICE/App/usbd_custom_hid_if.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Inc/usbd_customhid.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
@@ -72,15 +74,18 @@ USB_DEVICE/App/usbd_custom_hid_if.o: \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
-../Core/Inc/TMC4671_controller.hpp:
+../Core/Inc/TMC4671_controller.h:
 ../Core/Inc/TMC4671_API.h:
 ../Core/Inc/TMC4671_HW_Abstraction.h:
 ../Core/Inc/gpio.h:
 ../Core/Inc/main.h:
 ../Core/Inc/LinearRamp.h:
+../Core/Inc/util_functions.h:
