@@ -81,6 +81,9 @@ default.size.stdout \
 OBJDUMP_LIST += \
 Praca-Inzynierksa-STM32.list \
 
+OBJCOPY_HEX += \
+Praca-Inzynierksa-STM32.hex \
+
 
 # All Target
 all: main-build
@@ -89,8 +92,8 @@ all: main-build
 main-build: Praca-Inzynierksa-STM32.elf secondary-outputs
 
 # Tool invocations
-Praca-Inzynierksa-STM32.elf Praca-Inzynierksa-STM32.map: $(OBJS) $(USER_OBJS) C:\Users\dawid\Documents\Praca-Inzynierska\Praca-Inzynierksa-STM32\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "Praca-Inzynierksa-STM32.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\dawid\Documents\Praca-Inzynierska\Praca-Inzynierksa-STM32\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Praca-Inzynierksa-STM32.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+Praca-Inzynierksa-STM32.elf Praca-Inzynierksa-STM32.map: $(OBJS) $(USER_OBJS) C:\Users\dawid\Documents\praca-inzynierska\SteeringWheelFFB\Praca-Inzynierksa-STM32\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-g++ -o "Praca-Inzynierksa-STM32.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\dawid\Documents\praca-inzynierska\SteeringWheelFFB\Praca-Inzynierksa-STM32\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Praca-Inzynierksa-STM32.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -104,12 +107,17 @@ Praca-Inzynierksa-STM32.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TO
 	@echo 'Finished building: $@'
 	@echo ' '
 
+Praca-Inzynierksa-STM32.hex: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "Praca-Inzynierksa-STM32.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
-	-$(RM) Praca-Inzynierksa-STM32.elf Praca-Inzynierksa-STM32.list Praca-Inzynierksa-STM32.map default.size.stdout
+	-$(RM) Praca-Inzynierksa-STM32.elf Praca-Inzynierksa-STM32.hex Praca-Inzynierksa-STM32.list Praca-Inzynierksa-STM32.map default.size.stdout
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'

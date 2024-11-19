@@ -7,48 +7,24 @@
 *******************************************************************************/
 
 #include <TMC4671_API.h>
-#include "gpio.h"
-#include "spi.h"
 
-extern SPI_HandleTypeDef hspi1;
-
-#define TMC4671_WRITE_BIT 0x80
-#define TMC4671_ADDRESS_MASK 0x7F
-
-#define STATE_NOTHING_TO_DO    0
-#define STATE_START_INIT       1
-#define STATE_WAIT_INIT_TIME   2
-#define STATE_ESTIMATE_OFFSET  3
-
-// spi access
-int32_t tmc4671_readRegister(uint8_t address)
-{
-    uint8_t data[5] = { 0 };
-
-    // clear write bit
-    data[0] = address & TMC4671_ADDRESS_MASK;
-
-    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_RESET);
-    HAL_SPI_Receive(&hspi1, data, sizeof(data), 500);
-    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_SET);
-
-    return ((int32_t)data[1] << 24) | ((int32_t)data[2] << 16) | ((int32_t)data[3] << 8) | ((int32_t)data[4]);
-}
-
-void tmc4671_writeRegister(uint8_t address, int32_t value)
-{
-    uint8_t data[5] = { 0 };
-
-    data[0] = address | TMC4671_WRITE_BIT;
-    data[1] = 0xFF & (value >> 24);
-    data[2] = 0xFF & (value >> 16);
-    data[3] = 0xFF & (value >> 8);
-    data[4] = 0xFF & (value >> 0);
-
-    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_RESET);
-    HAL_SPI_Transmit(&hspi1, data, sizeof(data), 500);
-    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_SET);
-}
+//int32_t tmc4671_fieldRead(RegisterField field)
+//{
+//    int32_t value = tmc4671_readRegister(field.address);
+//    return tmc4671_fieldExtract(value, field);
+//}
+//
+//int32_t tmc4671_fieldUpdate(int32_t data, RegisterField field, int32_t value)
+//{
+//    return (data & (~field.mask)) | ((value << field.shift) & field.mask);
+//}
+//
+//void tmc4671_fieldWrite(RegisterField field, int32_t value)
+//{
+//    int32_t regValue = tmc4671_readRegister(field.address);
+//    regValue = tmc4671_fieldUpdate(regValue, field, value);
+//    tmc4671_writeRegister(field.address, regValue);
+//}
 
 void tmc4671_switchToMotionMode(uint8_t mode)
 {

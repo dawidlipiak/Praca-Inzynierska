@@ -8,13 +8,21 @@
 #ifndef INC_UTIL_FUNCTIONS_H_
 #define INC_UTIL_FUNCTIONS_H_
 
-int32_t tmc_filterPT1(int64_t *akku, int32_t newValue, int32_t lastValue, uint8_t actualFilter, uint8_t maxFilter)
+#include <stdint.h>
+
+template<class T,class C>
+T clip(T v, C l, C h)
+{
+  return { v > h ? h : v < l ? l : v };
+}
+
+static inline int32_t tmc_filterPT1(int64_t *akku, int32_t newValue, int32_t lastValue, uint8_t actualFilter, uint8_t maxFilter)
 {
 	*akku += (newValue-lastValue) << (maxFilter-actualFilter);
 	return *akku >> maxFilter;
 }
 
-uint32_t limitU32(int32_t value, int32_t min, int32_t max)
+static inline uint32_t limitU32(int32_t value, int32_t min, int32_t max)
 {
 	if (value > max)
 		return max;
@@ -24,7 +32,7 @@ uint32_t limitU32(int32_t value, int32_t min, int32_t max)
 		return value;
 }
 
-int64_t limitS64(int64_t value, int64_t min, int64_t max)
+static inline int64_t limitS64(int64_t value, int64_t min, int64_t max)
 {
 	if (value > max)
 		return max;
@@ -55,7 +63,7 @@ static const unsigned char sqrttable[256] =
 	247, 248, 248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255
 };
 
-int32_t sqrt_int(int32_t x)
+static inline int32_t sqrt_int(int32_t x)
 {
 	int32_t xn;
 

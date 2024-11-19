@@ -1,0 +1,69 @@
+../Core/Inc/TMC4671_API.h:32:17:uint32_t tmc4671_readRegister(uint8_t)	1
+../Core/Inc/TMC4671_API.h:51:13:void tmc4671_writeRegister(uint8_t, uint32_t)	1
+../Core/Inc/TMC4671_API.h:65:17:uint32_t tmc4671_fieldExtract(uint32_t, RegisterField)	2
+../Core/Inc/TMC4671_API.h:79:24:uint32_t tmc4671_fieldRead(RegisterField)	1
+../Core/Inc/TMC4671_API.h:85:24:uint32_t tmc4671_fieldUpdate(uint32_t, RegisterField, uint32_t)	1
+../Core/Inc/TMC4671_API.h:90:20:void tmc4671_fieldWrite(RegisterField, uint32_t)	1
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/bits/std_abs.h:56:3:long int std::abs(long int)	1
+../Core/Inc/TMC4671_controller.h:127:8:constexpr TMC4671Biquad_t::TMC4671Biquad_t()	1
+../Core/Inc/TMC4671_controller.h:143:2:TMC4671Biquad::TMC4671Biquad(bool)	1
+../Core/Inc/TMC4671_controller.h:147:2:TMC4671Biquad::TMC4671Biquad(const Biquad&, bool)	3
+../Core/Inc/TMC4671_controller.h:108:8:constexpr HallConfig::HallConfig()	1
+../Core/Inc/TMC4671_controller.h:172:8:constexpr PIDConfig::PIDConfig()	1
+../Core/Inc/TMC4671_controller.h:193:8:constexpr TMC4671Limits::TMC4671Limits()	1
+../Core/Inc/TMC4671_controller.h:96:8:constexpr AdcConfig::AdcConfig()	1
+../Core/Inc/TMC4671_controller.h:76:8:constexpr ABNencoder::ABNencoder()	1
+../Core/Inc/TMC4671_controller.h:184:8:constexpr PidPrecision::PidPrecision()	1
+../Core/Inc/TMC4671_controller.h:135:8:constexpr TMC4671Biquad_conf::TMC4671Biquad_conf()	1
+../Core/Inc/TMC4671_controller.h:164:8:TMC4671BiquadFilters::TMC4671BiquadFilters()	1
+../Core/Inc/TMC4671_controller.h:212:7:TMC4671_Driver::TMC4671_Driver()	1
+../Core/Src/TMC4671_controller.cpp:13:6:void TMC4671_Driver::setDriverState(DriverState)	2
+../Core/Src/TMC4671_controller.cpp:23:6:void TMC4671_Driver::setMotionMode(MotionMode)	1
+../Core/Src/TMC4671_controller.cpp:35:12:MotionMode TMC4671_Driver::getMotionMode()	1
+../Core/Src/TMC4671_controller.cpp:40:6:PhiE TMC4671_Driver::getPhiEType()	1
+../Core/Src/TMC4671_controller.cpp:45:9:int16_t TMC4671_Driver::getPhiE()	1
+../Core/Src/TMC4671_controller.cpp:52:9:int16_t TMC4671_Driver::getPhiE_Enc()	5
+../Core/Src/TMC4671_controller.cpp:70:6:void TMC4671_Driver::setMotorTypeAndPoles(MotorType, uint16_t)	2
+../Core/Src/TMC4671_controller.cpp:82:6:void TMC4671_Driver::setPhiEType(PhiE)	2
+../Core/Src/TMC4671_controller.cpp:91:6:void TMC4671_Driver::setHallConfig(HallConfig*)	1
+../Core/Src/TMC4671_controller.cpp:112:6:void TMC4671_Driver::setPWM(PwmMode)	1
+../Core/Src/TMC4671_controller.cpp:117:6:void TMC4671_Driver::setPWM(PwmMode, uint16_t, uint8_t, uint8_t)	1
+../Core/Src/TMC4671_controller.cpp:132:6:void TMC4671_Driver::setAdcOffset(AdcConfig*)	1
+../Core/Src/TMC4671_controller.cpp:140:6:void TMC4671_Driver::setAdcScale(AdcConfig*)	1
+../Core/Src/TMC4671_controller.cpp:148:6:void TMC4671_Driver::initAdc(AdcConfig*)	1
+../Core/Src/TMC4671_controller.cpp:171:6:void TMC4671_Driver::setPids(PIDConfig*)	1
+../Core/Src/TMC4671_controller.cpp:185:6:void TMC4671_Driver::setPidPrecision(PidPrecision*)	1
+../Core/Src/TMC4671_controller.cpp:203:6:void TMC4671_Driver::setAdcBrakeLimits(uint16_t, uint16_t)	1
+../Core/Src/TMC4671_controller.cpp:212:6:void TMC4671_Driver::setActualPosition(int32_t)	1
+../Core/Src/TMC4671_controller.cpp:217:9:int32_t TMC4671_Driver::getActualPosition()	1
+../Core/Src/TMC4671_controller.cpp:221:9:int32_t TMC4671_Driver::getAbsolutePosition()	5
+../Core/Src/TMC4671_controller.cpp:240:6:void TMC4671_Driver::setFluxTorque(int16_t, int16_t)	1
+../Core/Src/TMC4671_controller.cpp:251:6:void TMC4671_Driver::setStatusFlags(StatusFlags)	1
+../Core/Src/TMC4671_controller.cpp:255:6:void TMC4671_Driver::setStatusMask(StatusFlags)	1
+../Core/Src/TMC4671_controller.cpp:259:6:void TMC4671_Driver::setOpenLoopSpeedAccel(int32_t, uint32_t)	1
+../Core/Src/TMC4671_controller.cpp:264:6:void TMC4671_Driver::runOpenLoop(uint16_t, uint16_t, int32_t, int32_t, bool)	4
+../Core/Src/TMC4671_controller.cpp:288:6:void TMC4671_Driver::setUdUq(int16_t, int16_t)	1
+../Core/Src/TMC4671_controller.cpp:293:6:void TMC4671_Driver::setPhiE_ext(int16_t)	1
+../Core/Src/TMC4671_controller.cpp:300:6:bool TMC4671_Driver::calibrateAdcOffset(uint16_t)	9
+../Core/Src/TMC4671_controller.cpp:367:6:void TMC4671_Driver::estimateABNparams()	6
+../Core/Src/TMC4671_controller.cpp:432:6:void TMC4671_Driver::zeroAbnUsingPhiM(bool)	2
+../Core/Src/TMC4671_controller.cpp:453:6:void TMC4671_Driver::powerInitEncoder(int16_t)	16
+../Core/Src/TMC4671_controller.cpp:556:6:bool TMC4671_Driver::checkEncoder()	27
+../Core/Src/TMC4671_controller.cpp:718:6:void TMC4671_Driver::setupAbnEncoder(ABNencoder*)	7
+../Core/Src/TMC4671_controller.cpp:806:6:void TMC4671_Driver::setBiquadFlux(const TMC4671Biquad&)	1
+../Core/Src/TMC4671_controller.cpp:827:6:void TMC4671_Driver::setBiquadPos(const TMC4671Biquad&)	1
+../Core/Src/TMC4671_controller.cpp:848:6:void TMC4671_Driver::setBiquadVel(const TMC4671Biquad&)	1
+../Core/Src/TMC4671_controller.cpp:869:6:void TMC4671_Driver::setBiquadTorque(const TMC4671Biquad&)	1
+../Core/Src/TMC4671_controller.cpp:890:6:void TMC4671_Driver::setTorqueFilter(TMC4671Biquad_conf&)	5
+../Core/Src/TMC4671_controller.cpp:915:6:bool TMC4671_Driver::hasPower()	1
+../Core/Src/TMC4671_controller.cpp:920:6:void TMC4671_Driver::init()	5
+../Core/Src/TMC4671_controller.cpp:998:6:void TMC4671_Driver::deInit()	1
+../Core/Src/TMC4671_controller.cpp:1002:10:uint32_t TMC4671_Driver::rotate(int32_t)	1
+../Core/Src/TMC4671_controller.cpp:1015:10:uint32_t TMC4671_Driver::moveTo(int32_t)	1
+../Core/Src/TMC4671_controller.cpp:1032:6:void TMC4671_Driver::moveBy(int16_t)	6
+../Core/Src/TMC4671_controller.cpp:1084:6:void TMC4671_Driver::setMoveBy(bool)	1
+../Core/Src/TMC4671_controller.cpp:1087:6:void TMC4671_Driver::periodicJob()	2
+../Core/Src/TMC4671_controller.cpp:1177:6:void TMC4671_Driver::resetAllRegisters()	1
+../Core/Inc/util_functions.h:14:3:T clip(T, C, C) [with T = short unsigned int; C = int]	2
+../Core/Src/TMC4671_controller.cpp:1179:1:void __static_initialization_and_destruction_0(int, int)	3
+../Core/Src/TMC4671_controller.cpp:1179:1:cpp)	1

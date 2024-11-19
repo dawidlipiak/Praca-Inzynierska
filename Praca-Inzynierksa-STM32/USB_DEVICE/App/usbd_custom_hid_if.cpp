@@ -31,7 +31,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+extern TMC4671_Driver tmc4671;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -216,7 +216,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 	  else {
 	    	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 	  }
-	  TMC4671_controller_rotate(-50);
+	  tmc4671.moveBy(90);
   }
   else if (report_buffer[0] == 0x02)  // Zakładamy, że 0x02 to komenda dla obrotu w prawo
   {
@@ -227,7 +227,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 	  else {
 	    	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
 	  }
-	  TMC4671_controller_rotate(50);
+	  tmc4671.moveBy(-90);
   }
 
 //  buffer[0] = 0x01;
@@ -266,4 +266,3 @@ static int8_t USBD_CUSTOM_HID_SendReport_FS(uint8_t *report, uint16_t len)
 /**
   * @}
   */
-

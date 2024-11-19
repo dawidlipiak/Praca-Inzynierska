@@ -11,13 +11,58 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <stddef.h>
+//#include "util_functions.h"
 #include "TMC4671_HW_Abstraction.h"
+#include "gpio.h"
+#include "spi.h"
 
-int32_t tmc4671_readRegister(uint8_t address);
-void tmc4671_writeRegister(uint8_t address, int32_t value);
+extern SPI_HandleTypeDef hspi1;
 
-static inline uint32_t tmc4671_fieldExtract(uint32_t data, RegisterField field)
+#define TMC4671_WRITE_BIT 0x80
+#define TMC4671_ADDRESS_MASK 0x7F
+
+#define STATE_NOTHING_TO_DO    0
+#define STATE_START_INIT       1
+#define STATE_WAIT_INIT_TIME   2
+#define STATE_ESTIMATE_OFFSET  3
+
+// spi access
+static uint32_t tmc4671_readRegister(uint8_t address)
+{
+    uint8_t txBuf[5] = { 0 };
+    uint8_t rxBuf[5];
+
+    // clear write bit
+    txBuf[0] = TMC4671_ADDRESS_MASK & address;
+
+    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(&hspi1, txBuf, rxBuf, 5, 200);
+    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_SET);
+
+    uint32_t ret;
+	memcpy(&ret, &rxBuf[1], 4);  // Bajty danych zaczynają się od rxBuf[1]
+	ret = __REV(ret);  // Konwersja do little-endian
+
+	return ret;
+}
+
+static void tmc4671_writeRegister(uint8_t address, uint32_t value)
+{
+    uint8_t data[5] = { 0 };
+
+    data[0] = TMC4671_WRITE_BIT | address;
+
+    value =__REV(value);
+	memcpy(data+1,&value,4);
+
+    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi1, data, 5, 200);
+    HAL_GPIO_WritePin(SPI1_SS1_GPIO_Port,SPI1_SS1_Pin, GPIO_PIN_SET);
+}
+
+static uint32_t tmc4671_fieldExtract(uint32_t data, RegisterField field)
 {
     uint32_t value = (data & field.mask) >> field.shift;
 
@@ -48,6 +93,8 @@ static inline void tmc4671_fieldWrite(RegisterField field, uint32_t value)
     regValue = tmc4671_fieldUpdate(regValue, field, value);
     tmc4671_writeRegister(field.address, regValue);
 }
+
+
 
 // Do cyclic tasks
 void tmc4671_periodicJob(uint8_t initMode, uint8_t *initState, uint16_t initWaitTime, uint16_t *actualInitWaitTime, uint16_t startVoltage,

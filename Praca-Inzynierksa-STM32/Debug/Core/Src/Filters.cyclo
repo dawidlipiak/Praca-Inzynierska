@@ -1,0 +1,15 @@
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/cmath:241:3:constexpr float std::fabs(float)	1
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/cmath:463:3:constexpr float std::sqrt(float)	1
+../Core/Src/Filters.cpp:13:1:Biquad::Biquad()	1
+../Core/Src/Filters.cpp:16:1:Biquad::Biquad(BiquadType, float, float, float)	1
+../Core/Src/Filters.cpp:20:1:Biquad::~Biquad()	1
+../Core/Src/Filters.cpp:28:6:void Biquad::setFc(float)	1
+../Core/Src/Filters.cpp:34:7:float Biquad::getFc() const	1
+../Core/Src/Filters.cpp:41:6:void Biquad::setQ(float)	1
+../Core/Src/Filters.cpp:46:7:float Biquad::getQ() const	1
+../Core/Src/Filters.cpp:53:7:float Biquad::process(float)	1
+../Core/Src/Filters.cpp:60:6:void Biquad::setBiquad(BiquadType, float, float, float)	1
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/cmath:475:5:constexpr typename __gnu_cxx::__enable_if<std::__is_integer<_Tp>::__value, double>::__type std::sqrt(_Tp) [with _Tp = int]	1
+../Core/Src/Filters.cpp:72:6:void Biquad::calcBiquad()	11
+../Core/Inc/util_functions.h:14:3:T clip(T, C, C) [with T = float; C = float]	3
+C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/cmath:415:5:constexpr typename __gnu_cxx::__promote_2<_Tp, _Up>::__type std::pow(_Tp, _Up) [with _Tp = int; _Up = double]	1

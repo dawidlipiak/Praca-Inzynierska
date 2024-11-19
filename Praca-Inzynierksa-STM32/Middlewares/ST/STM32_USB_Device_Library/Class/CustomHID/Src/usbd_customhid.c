@@ -806,4 +806,3 @@ uint8_t USBD_CUSTOM_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
 /**
   * @}
   */
-
