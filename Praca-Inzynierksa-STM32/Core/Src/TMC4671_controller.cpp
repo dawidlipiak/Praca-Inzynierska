@@ -238,14 +238,14 @@ int32_t TMC4671_Driver::getAbsolutePosition(){
 }
 
 void TMC4671_Driver::setFluxTorque(int16_t flux, int16_t torque){
-//	if(curr_motionMode != MotionMode::torque){
+	if(curr_motionMode != MotionMode::torque){
 		setMotionMode(MotionMode::torque);
-//	}
+	}
 
-//	tmc4671_fieldWrite(TMC4671_PID_FLUX_TARGET_FIELD, flux);
-//	tmc4671_fieldWrite(TMC4671_PID_TORQUE_TARGET_FIELD, torque);
-	tmc4671_writeRegister(0x64, (flux & 0xffff) | (torque << 16));
-	tmc4671_writeRegister(0x64, (flux & 0xffff) | (torque << 16));
+	tmc4671_fieldWrite(TMC4671_PID_FLUX_TARGET_FIELD, flux);
+	tmc4671_fieldWrite(TMC4671_PID_TORQUE_TARGET_FIELD, torque);
+//	tmc4671_writeRegister(0x64, (flux & 0xffff) | (torque << 16));
+//	tmc4671_writeRegister(0x64, (flux & 0xffff) | (torque << 16));
 }
 
 void TMC4671_Driver::setStatusFlags(StatusFlags flag){
@@ -1087,7 +1087,7 @@ void TMC4671_Driver::setMoveBy(bool state, int16_t angle){
 }
 void TMC4671_Driver::periodicJob() {
 	if(this->moveFlag){
-		moveBy(45);
+		moveBy(this->moveAngle);
 		moveFlag = false;
 	}
 //    tmc4671_periodicJob(motorConfig.initMode, &(motorConfig.initState), motorConfig.initWaitTime,

@@ -17,12 +17,13 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <TMC4671_controller.h>
 #include "main.h"
 #include "spi.h"
-//#include "tim.h"
+#include "tim.h"
 #include "usb_device.h"
 #include "gpio.h"
+
+#include <TMC4671_controller.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -92,8 +93,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USB_DEVICE_Init();
   MX_SPI1_Init();
-//  MX_TIM10_Init();
-//  MX_TIM10_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
@@ -164,13 +164,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-//{
-//	if(htim->Instance == TIM10)
-//	{
-//		tmc4671.periodicJob();
-//	}
-//}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim->Instance == TIM10)
+	{
+		tmc4671.periodicJob();
+	}
+}
 /* USER CODE END 4 */
 
 /**

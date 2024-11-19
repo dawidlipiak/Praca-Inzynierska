@@ -26,10 +26,16 @@ Core/Src/global_callbacks.o: ../Core/Src/global_callbacks.cpp \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h \
- ../Core/Inc/constants.h
+ ../Core/Inc/main.h ../Core/Inc/constants.h \
+ ../Core/Inc/TMC4671_controller.h ../Core/Inc/TMC4671_API.h \
+ ../Core/Inc/TMC4671_HW_Abstraction.h ../Core/Inc/gpio.h \
+ ../Core/Inc/spi.h ../Core/Inc/LinearRamp.h ../Core/Inc/util_functions.h \
+ ../Core/Inc/Filters.h
 ../Core/Inc/global_callbacks.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
@@ -58,7 +64,18 @@ Core/Src/global_callbacks.o: ../Core/Src/global_callbacks.cpp \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h:
+../Core/Inc/main.h:
 ../Core/Inc/constants.h:
+../Core/Inc/TMC4671_controller.h:
+../Core/Inc/TMC4671_API.h:
+../Core/Inc/TMC4671_HW_Abstraction.h:
+../Core/Inc/gpio.h:
+../Core/Inc/spi.h:
+../Core/Inc/LinearRamp.h:
+../Core/Inc/util_functions.h:
+../Core/Inc/Filters.h:

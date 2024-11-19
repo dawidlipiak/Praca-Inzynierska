@@ -61,9 +61,9 @@ C:\ST\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.external
 ../Core/Src/TMC4671_controller.cpp:1002:10:uint32_t TMC4671_Driver::rotate(int32_t)	1
 ../Core/Src/TMC4671_controller.cpp:1015:10:uint32_t TMC4671_Driver::moveTo(int32_t)	1
 ../Core/Src/TMC4671_controller.cpp:1032:6:void TMC4671_Driver::moveBy(int16_t)	6
-../Core/Src/TMC4671_controller.cpp:1084:6:void TMC4671_Driver::setMoveBy(bool)	1
-../Core/Src/TMC4671_controller.cpp:1087:6:void TMC4671_Driver::periodicJob()	2
-../Core/Src/TMC4671_controller.cpp:1177:6:void TMC4671_Driver::resetAllRegisters()	1
+../Core/Src/TMC4671_controller.cpp:1084:6:void TMC4671_Driver::setMoveBy(bool, int16_t)	1
+../Core/Src/TMC4671_controller.cpp:1088:6:void TMC4671_Driver::periodicJob()	2
+../Core/Src/TMC4671_controller.cpp:1178:6:void TMC4671_Driver::resetAllRegisters()	1
 ../Core/Inc/util_functions.h:14:3:T clip(T, C, C) [with T = short unsigned int; C = int]	2
-../Core/Src/TMC4671_controller.cpp:1179:1:void __static_initialization_and_destruction_0(int, int)	3
-../Core/Src/TMC4671_controller.cpp:1179:1:cpp)	1
+../Core/Src/TMC4671_controller.cpp:1180:1:void __static_initialization_and_destruction_0(int, int)	3
+../Core/Src/TMC4671_controller.cpp:1180:1:cpp)	1

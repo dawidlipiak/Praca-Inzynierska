@@ -8,10 +8,10 @@
 #ifndef INC_GLOBAL_CALLBACKS_H_
 #define INC_GLOBAL_CALLBACKS_H_
 
-//#include "main.h"
+#include "main.h"
 //
-//#pragma once
-//#ifdef __cplusplus
+#pragma once
+#ifdef __cplusplus
 //
 //#include <vector>
 //
@@ -47,6 +47,6 @@
 //
 //#ifdef __cplusplus
 //}
-//#endif
+#endif
 //
 #endif /* INC_GLOBAL_CALLBACKS_H_ */

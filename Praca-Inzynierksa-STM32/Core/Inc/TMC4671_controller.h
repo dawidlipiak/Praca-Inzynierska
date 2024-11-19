@@ -217,7 +217,7 @@ public:
 	uint32_t moveTo(int32_t position);
 	void moveBy(int16_t angle); // +- 0-360 degrees
 	void periodicJob();
-	void setMoveBy(bool state);
+	void setMoveBy(bool state, int16_t angle);
 
 private:
 	HallConfig hallConfig;
