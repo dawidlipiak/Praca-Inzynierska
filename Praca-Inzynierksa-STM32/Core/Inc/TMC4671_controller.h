@@ -31,7 +31,6 @@ enum class PwmMode : uint8_t {off = 0,HSlow_LShigh = 1, HShigh_LSlow = 2, res2 =
 enum class MotionMode : uint8_t {stopped = 0, torque = 1, velocity = 2, position = 3, prbsflux = 4, prbstorque = 5, prbsvelocity = 6, uqudext = 8, encminimove = 9, NONE};
 enum class EncoderType : uint8_t {NONE=0,abn=1,sincos=2,uvw=3,hall=4,ext=5};
 enum class PosAndVelSelection: uint8_t {PhiE=0, PhiE_ext=1, PhiE_openloop=2, PhiE_abn=3, res1=4, PhiE_hal=5, PhiE_aenc=6, PhiA_aenc=7, res2=8, PhiM_abn=9, PhiM_abn2=10, PhiM_aenc=11, PhiM_hal=12};
-//enum class statusFlag : uint16_t {pid_x_target_limit=0, pid_x_target_ddt_limit=1, pid_x_errsum_limit=2, pid_x_output_limit=3, pid_v_target_limit=4, pid_v_target_ddt_limit=5, pid_v_errsum_limit=6, pid_v_output_limit=7}
 
 // Mapping of bits in status flag register and mask
 union StatusFlags {
@@ -80,15 +79,13 @@ struct ABNencoder{
 	bool apol 					= false;
 	bool bpol 					= false;
 	bool npol					= false;
-	bool rdir 					= true;
+	bool rdir 					= false;
 	bool ab_as_n 				= false;
 	bool latch_on_N 			= false; // Restore ABN_DECODER_COUNT_N into encoder count if true on pulse. otherwise store encoder count in ABN_DECODER_COUNT_N
 	int16_t phiEoffset 			= 0;	// Depends on phiM!
 	int16_t phiMoffset 			= 0;
 	int16_t posOffsetFromIndex 	= 0; // offset position to load after homing
-	bool useIndex 				= false;
 	bool isAligned 				= false;
-	bool indexHitFlag			= false;
 	PosAndVelSelection	posSelection = PosAndVelSelection::PhiE;
 	PosAndVelSelection  velSelection = PosAndVelSelection::PhiE;
 };
@@ -123,74 +120,19 @@ struct HallConfig{
 	uint16_t dPhiMax 		= 10922;
 };
 
-enum class TMCbiquadpreset : uint8_t {none=0,lowpass=1,notch=2,peak=3};
-struct TMC4671Biquad_t{
-	int32_t a1 = 0;
-	int32_t a2 = 0;
-	int32_t b0 = 0;
-	int32_t b1 = 0;
-	int32_t b2 = 0;
-	bool enable = false;
-};
-struct TMC4671Biquad_conf{
-	TMCbiquadpreset mode = TMCbiquadpreset::none;
-	biquad_constant_t params = {1000,50}; // Q = 1/100 for lowpass and 1/10 for notch and peak mode
-	float gain = 10.0; // Gain for peak mode
-};
-
-class TMC4671Biquad{
-public:
-	TMC4671Biquad(bool enable = false){
-		params.enable = enable;
-	}
-	TMC4671Biquad(const TMC4671Biquad_t bq) : params(bq){}
-	TMC4671Biquad(const Biquad& bq,bool enable = true){
-		// Note: trinamic swapped the naming of b and a from the regular convention in the datasheet and a and b are possibly inverse to b in our filter class
-		this->params.a1 = -(int32_t)(bq.b1 * (float)(1 << 29));
-		this->params.a2 = -(int32_t)(bq.b2 * (float)(1 << 29));
-		this->params.b0 = (int32_t)(bq.a0 * (float)(1 << 29));
-		this->params.b1 = (int32_t)(bq.a1 * (float)(1 << 29));
-		this->params.b2 = (int32_t)(bq.a2 * (float)(1 << 29));
-		this->params.enable = bq.getFc() > 0 ? enable : false;
-	}
-	void enable(bool enable){
-		params.enable = enable;
-	}
-
-	TMC4671Biquad_t params;
-};
-
-// Stores currently active filters
-struct TMC4671BiquadFilters{
-	TMC4671Biquad torque;
-	TMC4671Biquad flux;
-	TMC4671Biquad pos;
-	TMC4671Biquad vel;
-};
-
-
 struct PIDConfig{
-	uint16_t fluxI		= 800;
-	uint16_t fluxP		= 700;
-	uint16_t torqueI	= 800;
-	uint16_t torqueP	= 700;
-	uint16_t velocityI	= 0;
+	uint16_t fluxP		= 650;
+	uint16_t fluxI		= 1540;
+	uint16_t torqueP	= 650;
+	uint16_t torqueI	= 1540;
 	uint16_t velocityP	= 256;
-	uint16_t positionI	= 0;
+	uint16_t velocityI	= 0;
 	uint16_t positionP	= 128;
+	uint16_t positionI	= 0;
 	bool sequentialPI	= true; // Advanced pid
 };
 
-struct PidPrecision{ // Switch between Q8.8 (false) and Q4.12 (true) precision for pid controller
-	bool current_I	= false;
-	bool current_P	= false;
-	bool velocity_I	= false;
-	bool velocity_P	= false;
-	bool position_I	= false;
-	bool position_P	= false;
-};
-
-struct TMC4671Limits{
+struct PIDLimits{
 	uint16_t pid_torque_flux_ddt	= 32767;
 	uint16_t pid_uq_ud				= 30000;
 	uint16_t pid_torque_flux		= 30000;
@@ -215,24 +157,22 @@ public:
 	void deInit();
 	uint32_t rotate(int32_t velocity);
 	uint32_t moveTo(int32_t position);
-	void moveBy(int16_t angle); // +- 0-360 degrees
+	void moveByAngle(int16_t angle); // +- 0-360 degrees
+	void setMoveAngleFlag(bool state, int16_t angle);
 	void periodicJob();
-	void setMoveBy(bool state, int16_t angle);
 
 private:
 	HallConfig hallConfig;
 	PIDConfig pidConfig;
-	TMC4671Limits limits;
+	PIDLimits pidLimits;
 	AdcConfig adcConfig;
 	ABNencoder encoder;
-	PidPrecision pidPrecision;
-	TMC4671Biquad_conf torqueFilterConf;
-	TMC4671BiquadFilters curFilters;
 
 	MotorType motorType			= MotorType::BLDC;
 	PhiE phiEType 				= PhiE::ext;
 	PwmMode pwmMode 			= PwmMode::off;
 	MotionMode curr_motionMode	= MotionMode::stopped;
+	MotionMode last_motionMode	= MotionMode::stopped;
 	EncoderType encoderType		= EncoderType::abn;
 	DriverState driverState 	= DRIVER_DISABLE;
 	uint16_t pwmCnt 			= 4095;
@@ -243,73 +183,47 @@ private:
 	int16_t initPower 			= 9000; // Default current in setup routines ~ 7A
 	StatusFlags statusFlags 	= {0};
 	StatusFlags statusMask 		= {0};
+	volatile bool moveFlag		= false;
+	volatile int16_t moveAngle	= 0;
 
-	bool moveFlag				= false;
-	int16_t moveAngle			= 0;
+	void setupEncoder(ABNencoder* abnEncoder);
+	void estimateABNparams();
+	bool checkEncoder();
+	void powerInitEncoder(int16_t power);
+	void zeroAbnUsingPhiM(bool offsetPhiE = false);
+	bool calibrateAdcOffset(uint16_t time);
 
 	void setDriverState(DriverState state);
-	void setMotionMode(MotionMode mode);
 	void setMotorTypeAndPoles(MotorType motor, uint16_t poles);
-	void setPhiEType(PhiE phiEType);
 	void setHallConfig(HallConfig* hallConfig);
 	void setPWM(PwmMode pwmMode);
 	void setPWM(PwmMode pwmMode,uint16_t maxcnt,uint8_t bbmL,uint8_t bbmH);
+	void setPids(PIDConfig* pidConfig);
+	void setAdcBrakeLimits(uint16_t low,uint16_t high);
+	void initAdc(AdcConfig* adcConfig_p);
 	void setAdcOffset(AdcConfig* adcConfig_p);
 	void setAdcScale(AdcConfig* adcConfig_p);
-	void initAdc(AdcConfig* adcConfig_p);
-	void setPids(PIDConfig* pidConfig);
-	void setPidPrecision(PidPrecision* pidPrecision);
-	void setAdcBrakeLimits(uint16_t low,uint16_t high);
-	void setActualPosition(int32_t pos);
-	void setFluxTorque(int16_t flux, int16_t torque);
-	void setStatusFlags(StatusFlags flag);
-	void setStatusMask(StatusFlags mask);
-	void setUdUq(int16_t ud,int16_t uq);
-	void setPhiE_ext(int16_t phiE);
-	void setOpenLoopSpeedAccel(int32_t speed,uint32_t accel);
-	void runOpenLoop(uint16_t ud,uint16_t uq,int32_t speed,int32_t accel,bool torqueMode);
-	void setBiquadFlux(const TMC4671Biquad &filter);
-	void setBiquadPos(const TMC4671Biquad &filter);
-	void setBiquadVel(const TMC4671Biquad &filter);
-	void setBiquadTorque(const TMC4671Biquad &filter);
-	void setTorqueFilter(TMC4671Biquad_conf& conf);
 
-//	void setBiquadFlux(const TMC4671Biquad &filter);
-
+	void setMotionMode(MotionMode mode);
 	MotionMode getMotionMode();
+
+	void setPhiEType(PhiE phiEType);
 	PhiE getPhiEType();
-	int16_t getPhiE();
+	void setPhiE_ext(int16_t phiE);
 	int16_t getPhiE_Enc();
+	int16_t getPhiE();
+
+	void setActualPosition(int32_t pos);
 	int32_t getActualPosition();
 	int32_t getAbsolutePosition();
 
-	bool hasPower();
-	bool calibrateAdcOffset(uint16_t time);
-	void estimateABNparams();
-	void zeroAbnUsingPhiM(bool offsetPhiE);
-	void powerInitEncoder(int16_t power);
-	bool checkEncoder();
-	void setupAbnEncoder(ABNencoder* abnEncoder);
-	void resetAllRegisters();
+	void setFluxTorque(int16_t flux, int16_t torque);
+
+	void setStatusFlags(StatusFlags flag);
+	void setStatusMask(StatusFlags mask);
 };
 
+extern TMC4671_Driver tmc4671;  // Deklaracja globalnego obiektu
 
-//void TMC4671_controller_enableDriver(DriverState state);
-//
-//void TMC4671_controller_init();
-//
-//void TMC4671_controller_deInit(void);
-//
-//uint32_t TMC4671_controller_rotate(int32_t velocity);
-//
-//uint32_t TMC4671_controller_moveTo(int32_t position);
-//
-//uint32_t TMC4671_controller_moveBy(int32_t *ticks);
-//
-//uint8_t TMC4671_controller_positionReached(int32_t targetPosition,
-//		int32_t actualPosition, int32_t actualVelocity, int32_t maxPosDiff,
-//		int32_t maxVel);
-//
-//void TMC4671_controller_periodicJob(void);
 
 #endif /* INC_TMC4671_CONTROLLER_H_ */

@@ -2,6 +2,6 @@
 ../Core/Inc/TMC4671_API.h:51:13:void tmc4671_writeRegister(uint8_t, uint32_t)	32	static
 ../Core/Inc/TMC4671_API.h:65:17:uint32_t tmc4671_fieldExtract(uint32_t, RegisterField)	40	static
 ../Core/Src/main.cpp:69:5:int main()	8	static
-../Core/Src/main.cpp:125:6:void SystemClock_Config()	88	static
-../Core/Src/main.cpp:167:6:void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*)	16	static
-../Core/Src/main.cpp:180:6:void Error_Handler()	8	static,ignoring_inline_asm
+../Core/Src/main.cpp:128:6:void SystemClock_Config()	88	static
+../Core/Src/main.cpp:170:6:void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*)	16	static
+../Core/Src/main.cpp:192:6:void Error_Handler()	8	static,ignoring_inline_asm

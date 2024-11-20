@@ -31,7 +31,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-extern TMC4671_Driver tmc4671;
+
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -209,25 +209,13 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 //  memcpy(buffer, report_buffer, 0x08);
   if (report_buffer[0] == 0x01)  // Zakładamy, że 0x01 to komenda dla obrotu w lewo
   {
-//	  rotate_steering_wheel_left();
-	  if(HAL_GPIO_ReadPin(LED_ERR_GPIO_Port, LED_ERR_Pin) == GPIO_PIN_SET){
-	    	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-	  }
-	  else {
-	    	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-	  }
-	  tmc4671.setMoveBy(true, 90);
+	  tmc4671.setMoveAngleFlag(true, 90);
+	  HAL_GPIO_TogglePin(LED_ERR_GPIO_Port, LED_ERR_Pin);
   }
   else if (report_buffer[0] == 0x02)  // Zakładamy, że 0x02 to komenda dla obrotu w prawo
   {
-//	  rotate_steering_wheel_right();
-	  if(HAL_GPIO_ReadPin(LED_CLIP_GPIO_Port, LED_CLIP_Pin) == GPIO_PIN_SET){
-	    	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_RESET);
-	  }
-	  else {
-	    	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
-	  }
-	  tmc4671.setMoveBy(true, -90);
+	  tmc4671.setMoveAngleFlag(true, -90);
+	  HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
   }
 
 //  buffer[0] = 0x01;

@@ -48,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern TMC4671_Driver tmc4671;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -105,6 +105,7 @@ int main(void)
   HAL_Delay(100);
   /* USER CODE END 2 */
   tmc4671.init();
+  HAL_TIM_Base_Start_IT(&htim10);
 //  HAL_TIM_Base_Start_IT(&htim10);
 
   /* Infinite loop */
@@ -113,6 +114,8 @@ int main(void)
   {
 //	HAL_Delay(1);
     /* USER CODE END WHILE */
+	  HAL_Delay(5);
+	  tmc4671.periodicJob();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -168,7 +171,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim->Instance == TIM10)
 	{
-		tmc4671.periodicJob();
+		static uint32_t counter = 1;
+		if(counter%2000 == 0){
+			HAL_GPIO_TogglePin(LED_SYS_GPIO_Port, LED_SYS_Pin);
+//			tmc4671.setMoveBy(true, 90);
+		}
+		if(counter == UINT32_MAX - 1){
+			counter = 0;
+		}
+		counter++;
+//		tmc4671.periodicJob();
 	}
 }
 /* USER CODE END 4 */
