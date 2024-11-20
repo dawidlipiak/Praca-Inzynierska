@@ -1,6 +1,0 @@
-../Core/Inc/TMC4671_API.h:32:17:uint32_t tmc4671_readRegister(uint8_t)	1
-../Core/Inc/TMC4671_API.h:51:13:void tmc4671_writeRegister(uint8_t, uint32_t)	1
-../Core/Inc/TMC4671_API.h:65:17:uint32_t tmc4671_fieldExtract(uint32_t, RegisterField)	2
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:166:15:int8_t CUSTOM_HID_Init_FS()	1
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:177:15:int8_t CUSTOM_HID_DeInit_FS()	1
-../USB_DEVICE/App/usbd_custom_hid_if.cpp:190:15:int8_t CUSTOM_HID_OutEvent_FS(uint8_t*)	4
