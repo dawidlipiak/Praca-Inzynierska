@@ -1,1 +1,4 @@
-Praca-Inzynierksa-STM32/.settings/*
+Praca-Inzynierksa-STM32/settings/
+Praca-Inzynierksa-STM32/Debug/
+Praca-Inzynierksa-STM32/Release/
+*.o
