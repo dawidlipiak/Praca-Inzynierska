@@ -8,12 +8,13 @@
 #ifndef INC_TMC4671_CONTROLLER_H_
 #define INC_TMC4671_CONTROLLER_H_
 
+#include <stdlib.h>
+#include "stdbool.h"
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 #include "TMC4671_API.h"
 #include "gpio.h"
-#include "LinearRamp.h"
-#include "Filters.h"
+#include "util_functions.h"
 
 #define TORQUE_FLUX_MAX 	(int32_t)10000
 #define POSITION_SCALE_MAX  (int32_t)65536
