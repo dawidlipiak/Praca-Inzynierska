@@ -8,7 +8,7 @@
 
 #include <TMC4671_controller.h>
 
-TMC4671_Driver tmc4671;
+// TMC4671_Driver tmc4671;
 
 void TMC4671_Driver::init()
 {
@@ -39,7 +39,7 @@ void TMC4671_Driver::init()
 	// Setup main constants
 	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_TARGET, 0);
 	setPWM(PwmMode::off ,pwmCnt, bbmL, bbmH);
-	setMotorTypeAndPoles(motorType, encoder.pole_pairs);
+	setMotorTypeAndPoles(motorType, encoderConfig.pole_pairs);
 	setPhiEType(phiEType);
 	setHallConfig(&hallConfig); //enables hall filter and masking
 	initAdc(&adcConfig);
@@ -66,11 +66,13 @@ void TMC4671_Driver::init()
 	setDriverState(DRIVER_ENABLE);
 	setPWM(PwmMode::PWM_FOC);
 
-	while(!encoder.isAligned){
-		setupEncoder(&encoder);
+	while(!encoderConfig.isAligned){
+		setupEncoder();
 	}
 
 	setMotionMode(MotionMode::stopped);
+	isDriverInitialized = true;
+
 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
@@ -116,34 +118,28 @@ uint32_t TMC4671_Driver::moveTo(int32_t position) {
 	return TMC_ERROR_NONE;
 }
 
+void TMC4671_Driver::turn(int16_t power) {
+	if(!this->isInitialized())
+		return;
+	int32_t flux = 0;
+
+	setFluxTorque(flux, power);
+}
+
 void TMC4671_Driver::moveByAngle(int16_t angle) {
-//	// scale position deviation
-//	int32_t dX = (float) *ticks * (float) POSITION_SCALE_MAX
-//			/ (float) motorConfig.positionScaler;
-//
-//	// switch to position motion mode
-//	tmc4671_switchToMotionMode(TMC4671_MOTION_MODE_POSITION);
-//
-//	// set target position for ramp generator
-//	rampGenerator.targetPosition = tmc4671_readRegister(
-//			TMC4671_PID_POSITION_ACTUAL) + dX;
-//
-//	// remember switched motion mode
-//	actualMotionMode = TMC4671_MOTION_MODE_POSITION;
-//
+
 	// Start angle offsets all angles later so there is no jump if angle is already properly aligned
-	const int32_t startAngle = getPhiE_Enc();
-	const int32_t targetAngle = ((float)(angle*POSITION_SCALE_MAX)/360.0);
+	const int32_t startAngle = getActualPosition();
+	const int32_t targetAngle = (((float)(startAngle + angle)*POSITION_SCALE_MAX)/360.0f);
 
 	PhiE lastphie = getPhiEType();
 	MotionMode lastmode = getMotionMode();
 	setFluxTorque(0, 0);
-	setPhiEType(PhiE::ext);
-	setPhiE_ext(startAngle);
+	setPhiEType(PhiE::abn);
 
 	// Ramp up flux
-	for(int16_t flux = 0; flux <= this->initPower; flux+=20){
-		setFluxTorque(flux, 0);
+	for(int16_t flux = 0; flux <= this->initPower && getActualPosition() ; flux+=20){
+		setFluxTorque(flux, flux);
 		HAL_Delay(2);
 	}
 
@@ -177,30 +173,94 @@ void TMC4671_Driver::periodicJob() {
 	}
 }
 
-void TMC4671_Driver::setupEncoder(ABNencoder* abnEncoder_p){
+Encoder* TMC4671_Driver::getEncoder(){
+	return static_cast<Encoder*>(this);
+}
+
+void TMC4671_Driver::setCpr(uint32_t cpr){
+	if(cpr == 0)
+		cpr = 1;
+	this->encoderConfig.cpr = cpr;
+	this->cpr = cpr;
+}
+
+// Changes actual multi turn position for positioning
+void TMC4671_Driver::setActualPosition(int32_t pos){
+	tmc4671_fieldWrite(TMC4671_PID_POSITION_ACTUAL_FIELD, (uint32_t)pos);
+}
+
+// Returns actual multi turn position from tmc
+int32_t TMC4671_Driver::getActualPosition(){
+	return (int32_t)tmc4671_fieldRead(TMC4671_PID_POSITION_ACTUAL_FIELD);
+}
+
+int32_t TMC4671_Driver::getAbsolutePosition(){
+	int16_t pos;
+
+	if(getEncoderType() == EncoderType::abn){
+		pos = (int16_t)tmc4671_fieldRead(TMC4671_ABN_DECODER_PHI_M_FIELD);
+	}
+	else if(getEncoderType() == EncoderType::hall){
+		pos = (int16_t)tmc4671_fieldRead(TMC4671_HALL_PHI_M_FIELD);
+	}
+	else if(getEncoderType() == EncoderType::sincos || getEncoderType() == EncoderType::uvw){
+		pos = (int16_t)tmc4671_fieldRead(TMC4671_AENC_DECODER_PHI_M_FIELD);
+	}
+	else{
+		pos = getActualPosition(); // read phiM
+	}
+
+	return pos;
+}
+
+EncoderType TMC4671_Driver::getEncoderType(){
+	return this->encoderType;
+}
+
+void TMC4671_Driver::setTorqueLimit(uint16_t limit){
+	this->pidLimits.pid_torque_flux = limit;
+	initPower = (float)limit*0.75;
+	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_LIMITS, limit);
+}
+
+void TMC4671_Driver::setPidLimits(PIDLimits limits){
+	this->pidLimits = limits;
+	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_TARGET_DDT_LIMITS, pidLimits.pid_torque_flux_ddt);
+	tmc4671_writeRegister(TMC4671_PIDOUT_UQ_UD_LIMITS, pidLimits.pid_uq_ud);
+	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_LIMITS, pidLimits.pid_torque_flux);
+	tmc4671_writeRegister(TMC4671_PID_ACCELERATION_LIMIT,pidLimits.pid_acc_lim);
+	tmc4671_writeRegister(TMC4671_PID_VELOCITY_LIMIT, pidLimits.pid_vel_lim);
+	tmc4671_writeRegister(TMC4671_PID_POSITION_LIMIT_LOW, pidLimits.pid_pos_low);
+	tmc4671_writeRegister(TMC4671_PID_POSITION_LIMIT_HIGH, pidLimits.pid_pos_high);
+}
+
+bool TMC4671_Driver::isInitialized()
+{
+	return this->isDriverInitialized;
+}
+
+void TMC4671_Driver::setupEncoder(){
 	this->statusMask.flags.AENC_N = 0;
 	this->statusMask.flags.ENC_N = 0;
 	setStatusMask(statusMask);
 
-	memcpy(&this->encoder, abnEncoder_p, sizeof(this->encoder));
+	tmc4671_fieldWrite(TMC4671_ABN_APOL_FIELD, encoderConfig.apol);
+	tmc4671_fieldWrite(TMC4671_ABN_BPOL_FIELD, encoderConfig.bpol);
+	tmc4671_fieldWrite(TMC4671_ABN_NPOL_FIELD, encoderConfig.npol);
+	tmc4671_fieldWrite(TMC4671_USE_ABN_AS_N_FIELD, encoderConfig.ab_as_n);
+	tmc4671_fieldWrite(TMC4671_ABN_CLN_FIELD, encoderConfig.latch_on_N);
+	tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, encoderConfig.rdir);
 
-	tmc4671_fieldWrite(TMC4671_ABN_APOL_FIELD, abnEncoder_p->apol);
-	tmc4671_fieldWrite(TMC4671_ABN_BPOL_FIELD, abnEncoder_p->bpol);
-	tmc4671_fieldWrite(TMC4671_ABN_NPOL_FIELD, abnEncoder_p->npol);
-	tmc4671_fieldWrite(TMC4671_USE_ABN_AS_N_FIELD, abnEncoder_p->ab_as_n);
-	tmc4671_fieldWrite(TMC4671_ABN_CLN_FIELD, abnEncoder_p->latch_on_N);
-	tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, abnEncoder_p->rdir);
+	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PPR_FIELD, encoderConfig.cpr);
 
-	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PPR_FIELD, abnEncoder_p->cpr);
-
-	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_E_OFFSET_FIELD, abnEncoder_p->phiEoffset);
-	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_M_OFFSET_FIELD, abnEncoder_p->phiMoffset);
+	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_E_OFFSET_FIELD, encoderConfig.phiEoffset);
+	tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_M_OFFSET_FIELD, encoderConfig.phiMoffset);
 
 	// Set mechanical angle
-	this->encoder.posSelection = PosAndVelSelection::PhiM_abn;
-	this->encoder.velSelection = PosAndVelSelection::PhiM_abn;
-	tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)this->encoder.posSelection);
-	tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)this->encoder.velSelection);
+	encoderConfig.posSelection = PosAndVelSelection::PhiM_abn;
+	encoderConfig.velSelection = PosAndVelSelection::PhiM_abn;
+	tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)encoderConfig.posSelection);
+	tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)encoderConfig.velSelection);
 	tmc4671_fieldWrite(TMC4671_VELOCITY_METER_SELECTION_FIELD, 0); // 0: default velocity meter (fixed frequency sampling)
 
 
@@ -213,22 +273,21 @@ void TMC4671_Driver::setupEncoder(ABNencoder* abnEncoder_p){
 	powerInitEncoder(this->initPower);
 
 	uint8_t enc_retry = 0;
-	while(!encoder.isAligned && enc_retry < 3){
+	while(!encoderConfig.isAligned && enc_retry < 3){
 		checkEncoder();
 		enc_retry++;
 	}
-	if(!encoder.isAligned) {
+	if(!encoderConfig.isAligned) {
 		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 		setDriverState(DRIVER_DISABLE);
 		return;
 	}
 
-	if(this->encoderType == EncoderType::abn){
+	if(getEncoderType() == EncoderType::abn){
 		setPhiEType(PhiE::abn);
 	}
-	else if(this->encoderType == EncoderType::sincos || this->encoderType == EncoderType::uvw){
-		setPhiEType(PhiE::aenc);
-	}
+
+	this->encoderReady = encoderConfig.isAligned;
 //	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
 //	HAL_Delay(1000);
 //	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
@@ -289,19 +348,19 @@ void TMC4671_Driver::estimateABNparams(){
 	setMotionMode(lastmode);
 
 	bool npol = highcount > c/2;
-	encoder.rdir = rcount > c/2;
+	encoderConfig.rdir = rcount > c/2;
 
-	if(npol != encoder.npol){ // Invert dir if polarity was reversed TODO correct? likely wrong at the moment
-		encoder.rdir = !encoder.rdir;
+	if(npol != encoderConfig.npol){ // Invert dir if polarity was reversed TODO correct? likely wrong at the moment
+		encoderConfig.rdir = !encoderConfig.rdir;
 		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 		HAL_Delay(300);
 		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
 	}
 
 
-	encoder.apol = npol;
-	encoder.bpol = npol;
-	encoder.npol = npol;
+	encoderConfig.apol = npol;
+	encoderConfig.bpol = npol;
+	encoderConfig.npol = npol;
 
 //	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
 //	HAL_Delay(200);
@@ -435,23 +494,20 @@ bool TMC4671_Driver::checkEncoder(){
 
 	if(revCount > maxcount){ // Encoder seems reversed
 		// reverse encoder
-		if(this->encoderType == EncoderType::abn){
-			this->encoder.rdir = !this->encoder.rdir;
-//			this->encoder.apol = !this->encoder.apol;
-//			this->encoder.bpol = !this->encoder.bpol;
-//			this->encoder.npol = !this->encoder.npol;
+		if(getEncoderType() == EncoderType::abn){
+			this->encoderConfig.rdir = !this->encoderConfig.rdir;
+//			this->encoderConfig.apol = !this->encoderConfig.apol;
+//			this->encoderConfig.bpol = !this->encoderConfig.bpol;
+//			this->encoderConfig.npol = !this->encoderConfig.npol;
 			HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 			HAL_Delay(300);
 			HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-			tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, this->encoder.rdir);
-//			tmc4671_fieldWrite(TMC4671_ABN_APOL_FIELD, this->encoder.apol);
-//			tmc4671_fieldWrite(TMC4671_ABN_BPOL_FIELD, this->encoder.bpol);
-//			tmc4671_fieldWrite(TMC4671_ABN_NPOL_FIELD, this->encoder.npol);
+			tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, this->encoderConfig.rdir);
+//			tmc4671_fieldWrite(TMC4671_ABN_APOL_FIELD, this->encoderConfig.apol);
+//			tmc4671_fieldWrite(TMC4671_ABN_BPOL_FIELD, this->encoderConfig.bpol);
+//			tmc4671_fieldWrite(TMC4671_ABN_NPOL_FIELD, this->encoderConfig.npol);
 //			result = false;
 //			setupEncoder(&encoder);
-		}
-		else if(this->encoderType == EncoderType::ext){
-//			this->encoderReversed = !this->encoderReversed;
 		}
 	}
 
@@ -461,7 +517,7 @@ bool TMC4671_Driver::checkEncoder(){
 	setMotionMode(lastmode);
 
 	if(result){
-		encoder.isAligned = true;
+		encoderConfig.isAligned = true;
 	}
 
 	return result;
@@ -484,14 +540,9 @@ void TMC4671_Driver::powerInitEncoder(int16_t power){
 
 	RegisterField phiEoffsetReg = TMC4671_ABN_DECODER_PHI_E_OFFSET_FIELD;
 
-	if(this->encoderType == EncoderType::abn){
+	if(getEncoderType() == EncoderType::abn){
 		phiEoffsetReg = TMC4671_ABN_DECODER_PHI_E_OFFSET_FIELD;
 		zeroAbnUsingPhiM();
-	}
-	else if(this->encoderType == EncoderType::sincos || this->encoderType == EncoderType::uvw){
-		tmc4671_writeRegister(TMC4671_AENC_DECODER_COUNT, 0); //Zero encoder
-		tmc4671_writeRegister(TMC4671_AENC_DECODER_POSITION, 0); //Zero encoder
-		phiEoffsetReg = TMC4671_AENC_DECODER_PHI_E_OFFSET_FIELD;
 	}
 //	else if (usingExternalEncoder()){
 //		externalEncoderPhieOffset = 0;
@@ -545,11 +596,8 @@ void TMC4671_Driver::powerInitEncoder(int16_t power){
 
 	tmc4671_fieldWrite(phiEoffsetReg, phiEoffset);
 
-	if(this->encoderType == EncoderType::abn){
-		encoder.phiEoffset = phiEoffset;
-	}
-	else if(this->encoderType == EncoderType::sincos || this->encoderType == EncoderType::uvw){
-		encoder.phiEoffset = phiEoffset;
+	if(getEncoderType() == EncoderType::abn){
+		encoderConfig.phiEoffset = phiEoffset;
 	}
 
 	setPhiE_ext(0);
@@ -559,13 +607,13 @@ void TMC4671_Driver::powerInitEncoder(int16_t power){
 
 void TMC4671_Driver::zeroAbnUsingPhiM(bool offsetPhiE){
 	int32_t npos = tmc4671_readRegister(TMC4671_ABN_DECODER_COUNT_N); // raw encoder counts at index hit
-	int32_t npos_M = (npos * 0xffff) / encoder.cpr; // Scaled encoder angle at index
-	encoder.phiMoffset = -npos_M;
+	int32_t npos_M = (npos * 0xffff) / encoderConfig.cpr; // Scaled encoder angle at index
+	encoderConfig.phiMoffset = -npos_M;
 
 	if(offsetPhiE){
-		encoder.phiEoffset += npos_M * encoder.pole_pairs;
+		encoderConfig.phiEoffset += npos_M * encoderConfig.pole_pairs;
 	}else{
-		tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_M_OFFSET_FIELD, encoder.phiMoffset);
+		tmc4671_fieldWrite(TMC4671_ABN_DECODER_PHI_M_OFFSET_FIELD, encoderConfig.phiMoffset);
 	}
 
 	setActualPosition(getAbsolutePosition()); // Set position to absolute position = ~zero
@@ -651,7 +699,7 @@ void TMC4671_Driver::setMotorTypeAndPoles(MotorType motor, uint16_t poles){
 		poles = 1;
 	}
 	this->motorType = motor;
-	this->encoder.pole_pairs = poles;
+	this->encoderConfig.pole_pairs = poles;
 
 	tmc4671_fieldWrite(TMC4671_N_POLE_PAIRS_FIELD, poles);
 	tmc4671_fieldWrite(TMC4671_MOTOR_TYPE_FIELD, (uint8_t)motor);
@@ -800,13 +848,13 @@ void TMC4671_Driver::setPhiE_ext(int16_t phiE){
  * Reads phiE directly from the encoder selection instead of the current phiE selection
  */
 int16_t TMC4671_Driver::getPhiE_Enc(){
-	if(this->encoderType == EncoderType::abn){
+	if(getEncoderType() == EncoderType::abn){
 		return (int16_t)tmc4671_fieldRead(TMC4671_ABN_DECODER_PHI_E_FIELD);
 	}
-	else if(this->encoderType == EncoderType::sincos || this->encoderType == EncoderType::uvw){
+	else if(getEncoderType() == EncoderType::sincos || getEncoderType() == EncoderType::uvw){
 		return (int16_t)tmc4671_fieldRead(TMC4671_AENC_DECODER_PHI_E_FIELD);
 	}
-	else if(this->encoderType == EncoderType::hall){
+	else if(getEncoderType() == EncoderType::hall){
 		return (int16_t)tmc4671_fieldRead(TMC4671_HALL_PHI_E_FIELD);
 	}
 	else{
@@ -816,35 +864,6 @@ int16_t TMC4671_Driver::getPhiE_Enc(){
 
 int16_t TMC4671_Driver::getPhiE(){
 	return (int16_t)tmc4671_readRegister(TMC4671_PHI_E);
-}
-
-// Changes actual multi turn position for positioning
-void TMC4671_Driver::setActualPosition(int32_t pos){
-	tmc4671_fieldWrite(TMC4671_PID_POSITION_ACTUAL_FIELD, (uint32_t)pos);
-}
-
-// Returns actual multi turn position from tmc
-int32_t TMC4671_Driver::getActualPosition(){
-	return (int32_t)tmc4671_fieldRead(TMC4671_PID_POSITION_ACTUAL_FIELD);
-}
-
-int32_t TMC4671_Driver::getAbsolutePosition(){
-	int16_t pos;
-
-	if(this->encoderType == EncoderType::abn){
-		pos = (int16_t)tmc4671_fieldRead(TMC4671_ABN_DECODER_PHI_M_FIELD);
-	}
-	else if(this->encoderType == EncoderType::hall){
-		pos = (int16_t)tmc4671_fieldRead(TMC4671_HALL_PHI_M_FIELD);
-	}
-	else if(this->encoderType == EncoderType::sincos || this->encoderType == EncoderType::uvw){
-		pos = (int16_t)tmc4671_fieldRead(TMC4671_AENC_DECODER_PHI_M_FIELD);
-	}
-	else{
-		pos = getActualPosition(); // read phiM
-	}
-
-	return pos;
 }
 
 void TMC4671_Driver::setFluxTorque(int16_t flux, int16_t torque){
@@ -863,4 +882,3 @@ void TMC4671_Driver::setStatusFlags(StatusFlags flag){
 void TMC4671_Driver::setStatusMask(StatusFlags mask){
 	tmc4671_writeRegister(TMC4671_STATUS_MASK, mask.asInt);
 }
-

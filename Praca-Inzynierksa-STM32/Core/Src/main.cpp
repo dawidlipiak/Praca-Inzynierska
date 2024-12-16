@@ -24,6 +24,7 @@
 #include "gpio.h"
 
 #include <TMC4671_controller.h>
+#include <AxisWheel.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+AxisWheel axisWheel;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,7 +105,7 @@ int main(void)
   HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
   HAL_Delay(100);
   /* USER CODE END 2 */
-  tmc4671.init();
+  axisWheel.setupTMC4671();
   HAL_TIM_Base_Start_IT(&htim10);
 //  HAL_TIM_Base_Start_IT(&htim10);
 
@@ -114,8 +115,9 @@ int main(void)
   {
 //	HAL_Delay(1);
     /* USER CODE END WHILE */
-	  HAL_Delay(5);
-	  tmc4671.periodicJob();
+	  HAL_Delay(1);
+	  axisWheel.updateDriverTorque();
+//	  tmc4671.periodicJob();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

@@ -749,12 +749,12 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 //  memcpy(buffer, report_buffer, 0x08);
   if (report_buffer[0] == 0x01)  // Zakładamy, że 0x01 to komenda dla obrotu w lewo
   {
-	  tmc4671.setMoveAngleFlag(true, 90);
+//	  tmc4671.setMoveAngleFlag(true, 90);
 	  HAL_GPIO_TogglePin(LED_ERR_GPIO_Port, LED_ERR_Pin);
   }
   else if (report_buffer[0] == 0x02)  // Zakładamy, że 0x02 to komenda dla obrotu w prawo
   {
-	  tmc4671.setMoveAngleFlag(true, -90);
+//	  tmc4671.setMoveAngleFlag(true, -90);
 	  HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
   }
 

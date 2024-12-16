@@ -11,10 +11,13 @@
 #include <stdlib.h>
 #include "stdbool.h"
 #include <stdint.h>
+#include <memory>
+
 #include "stm32f4xx_hal.h"
 #include "TMC4671_API.h"
 #include "gpio.h"
 #include "util_functions.h"
+#include "Encoder.h"
 
 #define TORQUE_FLUX_MAX 	(int32_t)10000
 #define POSITION_SCALE_MAX  (int32_t)65536
@@ -30,7 +33,6 @@ enum class MotorType : uint8_t {NONE = 0, DC = 1, STEPPER = 2, BLDC = 3, ERR};
 enum class PhiE : uint8_t {ext = 1, openloop = 2, abn = 3, hall = 5, aenc = 6, aencE =7 , NONE, extEncoder};
 enum class PwmMode : uint8_t {off = 0,HSlow_LShigh = 1, HShigh_LSlow = 2, res2 = 3, res3 = 4, PWM_LS = 5, PWM_HS = 6, PWM_FOC = 7};
 enum class MotionMode : uint8_t {stopped = 0, torque = 1, velocity = 2, position = 3, prbsflux = 4, prbstorque = 5, prbsvelocity = 6, uqudext = 8, encminimove = 9, NONE};
-enum class EncoderType : uint8_t {NONE=0,abn=1,sincos=2,uvw=3,hall=4,ext=5};
 enum class PosAndVelSelection: uint8_t {PhiE=0, PhiE_ext=1, PhiE_openloop=2, PhiE_abn=3, res1=4, PhiE_hal=5, PhiE_aenc=6, PhiA_aenc=7, res2=8, PhiM_abn=9, PhiM_abn2=10, PhiM_aenc=11, PhiM_hal=12};
 
 // Mapping of bits in status flag register and mask
@@ -73,24 +75,6 @@ union StatusFlags {
     StatusFlags_s flags;
 };
 
-struct ABNencoder{
-	uint16_t ppr 				= 10000;
-	uint16_t cpr 				= 4 * ppr;
-	uint8_t pole_pairs 			= 4;
-	bool apol 					= false;
-	bool bpol 					= false;
-	bool npol					= false;
-	bool rdir 					= false;
-	bool ab_as_n 				= false;
-	bool latch_on_N 			= false; // Restore ABN_DECODER_COUNT_N into encoder count if true on pulse. otherwise store encoder count in ABN_DECODER_COUNT_N
-	int16_t phiEoffset 			= 0;	// Depends on phiM!
-	int16_t phiMoffset 			= 0;
-	int16_t posOffsetFromIndex 	= 0; // offset position to load after homing
-	bool isAligned 				= false;
-	PosAndVelSelection	posSelection = PosAndVelSelection::PhiE;
-	PosAndVelSelection  velSelection = PosAndVelSelection::PhiE;
-};
-
 struct AdcConfig{
 	uint16_t mdecA 			= 660; // 334 default. 331 recommended by datasheet,662 double. 660 lowest noise
 	uint16_t mdecB 			= 660; // Encoder ADC high resolution recommended
@@ -119,6 +103,24 @@ struct HallConfig{
 	int16_t phiEoffset 		= 0;
 	int16_t phiMoffset 		= 0;
 	uint16_t dPhiMax 		= 10922;
+};
+
+struct ABNencoderConfig{
+	uint16_t ppr 				= 10000;
+	uint16_t cpr 				= 4 * ppr;
+	uint8_t pole_pairs 			= 4;
+	bool apol 					= false;
+	bool bpol 					= false;
+	bool npol					= false;
+	bool rdir 					= false;
+	bool ab_as_n 				= false;
+	bool latch_on_N 			= false; // Restore ABN_DECODER_COUNT_N into encoder count if true on pulse. otherwise store encoder count in ABN_DECODER_COUNT_N
+	int16_t phiEoffset 			= 0;	// Depends on phiM!
+	int16_t phiMoffset 			= 0;
+	int16_t posOffsetFromIndex 	= 0; // offset position to load after homing
+	bool isAligned 				= false;
+	PosAndVelSelection	posSelection = PosAndVelSelection::PhiE;
+	PosAndVelSelection  velSelection = PosAndVelSelection::PhiE;
 };
 
 struct PIDConfig{
@@ -152,42 +154,57 @@ typedef enum {
 	TMC_ERROR_CHIP 		= 0x40
 } TMCError;
 
-class TMC4671_Driver {
+class TMC4671_Driver : Encoder {
 public:
 	void init();
 	void deInit();
 	uint32_t rotate(int32_t velocity);
 	uint32_t moveTo(int32_t position);
+	void turn(int16_t power);
 	void moveByAngle(int16_t angle); // +- 0-360 degrees
 	void setMoveAngleFlag(bool state, int16_t angle);
 	void periodicJob();
+
+	// Encoder override functions
+	Encoder* getEncoder();
+	void setCpr(uint32_t cpr) override;
+	void setActualPosition(int32_t pos) override;
+	int32_t getActualPosition() override;
+	int32_t getAbsolutePosition() override;
+	EncoderType getEncoderType() override;
+
+	void setTorqueLimit(uint16_t limit);
+	void setPidLimits(PIDLimits limits);
+
+	bool isInitialized();
 
 private:
 	HallConfig hallConfig;
 	PIDConfig pidConfig;
 	PIDLimits pidLimits;
 	AdcConfig adcConfig;
-	ABNencoder encoder;
+	ABNencoderConfig encoderConfig;
 
 	MotorType motorType			= MotorType::BLDC;
+    EncoderType encoderType 	= EncoderType::abn;
 	PhiE phiEType 				= PhiE::ext;
 	PwmMode pwmMode 			= PwmMode::off;
 	MotionMode curr_motionMode	= MotionMode::stopped;
 	MotionMode last_motionMode	= MotionMode::stopped;
-	EncoderType encoderType		= EncoderType::abn;
 	DriverState driverState 	= DRIVER_DISABLE;
 	uint16_t pwmCnt 			= 4095;
 	uint8_t bbmL				= 50;
 	uint8_t bbmH				= 50;
 	uint16_t brakeLimLow 		= 50700;
 	uint16_t brakeLimHigh 		= 50900;
-	int16_t initPower 			= 9000; // Default current in setup routines ~ 7A
+	int16_t initPower 			= 7000; // Default current in setup routines ~ 7A
 	StatusFlags statusFlags 	= {0};
 	StatusFlags statusMask 		= {0};
 	volatile bool moveFlag		= false;
 	volatile int16_t moveAngle	= 0;
+	bool isDriverInitialized	= false;
 
-	void setupEncoder(ABNencoder* abnEncoder);
+	void setupEncoder();
 	void estimateABNparams();
 	bool checkEncoder();
 	void powerInitEncoder(int16_t power);
@@ -214,17 +231,10 @@ private:
 	int16_t getPhiE_Enc();
 	int16_t getPhiE();
 
-	void setActualPosition(int32_t pos);
-	int32_t getActualPosition();
-	int32_t getAbsolutePosition();
-
 	void setFluxTorque(int16_t flux, int16_t torque);
 
 	void setStatusFlags(StatusFlags flag);
 	void setStatusMask(StatusFlags mask);
 };
-
-extern TMC4671_Driver tmc4671;  // Deklaracja globalnego obiektu
-
 
 #endif /* INC_TMC4671_CONTROLLER_H_ */
