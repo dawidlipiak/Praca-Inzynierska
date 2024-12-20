@@ -175,7 +175,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		static uint32_t counter = 1;
 		if(counter%2000 == 0){
-			HAL_GPIO_TogglePin(LED_SYS_GPIO_Port, LED_SYS_Pin);
+			// HAL_GPIO_TogglePin(LED_SYS_GPIO_Port, LED_SYS_Pin);
 //			tmc4671.setMoveBy(true, 90);
 		}
 		if(counter == UINT32_MAX - 1){

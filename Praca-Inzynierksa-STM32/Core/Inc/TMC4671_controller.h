@@ -107,11 +107,11 @@ struct HallConfig{
 
 struct ABNencoderConfig{
 	uint16_t ppr 				= 10000;
-	uint16_t cpr 				= 4 * ppr;
+	uint16_t cpr 				= 40000;
 	uint8_t pole_pairs 			= 4;
-	bool apol 					= false;
-	bool bpol 					= false;
-	bool npol					= false;
+	bool apol 					= true;
+	bool bpol 					= true;
+	bool npol					= true;
 	bool rdir 					= false;
 	bool ab_as_n 				= false;
 	bool latch_on_N 			= false; // Restore ABN_DECODER_COUNT_N into encoder count if true on pulse. otherwise store encoder count in ABN_DECODER_COUNT_N
@@ -137,8 +137,8 @@ struct PIDConfig{
 
 struct PIDLimits{
 	uint16_t pid_torque_flux_ddt	= 32767;
-	uint16_t pid_uq_ud				= 30000;
-	uint16_t pid_torque_flux		= 30000;
+	uint16_t pid_uq_ud				= 50000;
+	uint16_t pid_torque_flux		= 50000;
 	uint32_t pid_acc_lim			= 2147483647;
 	uint32_t pid_vel_lim			= 2147483647;
 	int32_t pid_pos_low				= -2147483647;
@@ -232,9 +232,12 @@ private:
 	int16_t getPhiE();
 
 	void setFluxTorque(int16_t flux, int16_t torque);
+    void setTargetVelocity(int32_t vel);
+    void setTargetPos(int32_t pos);
 
-	void setStatusFlags(StatusFlags flag);
+    void setStatusFlags(StatusFlags flag);
 	void setStatusMask(StatusFlags mask);
+    StatusFlags readFlags(bool maskedOnly);
 };
 
 #endif /* INC_TMC4671_CONTROLLER_H_ */

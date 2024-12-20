@@ -13,6 +13,7 @@
 #include <tuple>
 
 #include "util_functions.h"
+#include "usbd_customhid.h"
 #include "TMC4671_controller.h"
 #include <memory>
 
@@ -36,6 +37,11 @@ struct metric_t {
 struct axis_metric_t {
 	metric_t current;
 	metric_t previous;
+};
+
+struct __attribute__((__packed__)) HID_report_In {
+    uint8_t reportId;
+    int16_t axisX = 0;
 };
 
 class AxisWheel
@@ -63,7 +69,7 @@ public:
     void setSoftLockStrength(uint8_t strength);
 
     void calculateStaticAxisEffects();
-    void getAxisTotalTorque(int32_t* torque);
+    bool getAxisTotalTorque(int32_t* torque);
 
 
 private:
@@ -72,13 +78,14 @@ private:
 	const float AXIS_INERTIA_RATIO = INTERNAL_SCALER_INERTIA * INTERNAL_AXIS_INERTIA_SCALER / 255.0;
 
     std::unique_ptr<TMC4671_Driver> tmc4671 = std::make_unique<TMC4671_Driver>();
+    HID_report_In HIDreportIn;
     axis_metric_t metric;
     int32_t effectTorque = 0;
 	int32_t axisEffectTorque = 0;
     const int32_t internalEffectForceClip = 20000;
     uint8_t damperIntensity = 30;
     uint16_t power = 7000;
-    float powerTorqueFactor = 0.6;
+    float powerTorqueFactor = 0.5;
     uint16_t maxDegreesOfRotation = 900;
 
     const float ffbEffectScaler = 1.0;
@@ -88,10 +95,10 @@ private:
     bool idleCenterSpring = true;
     uint8_t idleCenterSpringStrength = 127;
     int16_t idleCenterSpringClip = 4445;
-    float idleCenterSpringFactor = 1.0;
+    float idleCenterSpringFactor = 0.77;
 
     uint8_t softLockStrength = 127;
-    const float softLockGainFactor = 25.0;
+    const float softLockGainFactor = 30.0;
 };
 
 #endif // INC_AXISWHEEL_FUNCTIONS_H_

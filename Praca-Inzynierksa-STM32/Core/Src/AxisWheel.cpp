@@ -1,5 +1,7 @@
 #include "AxisWheel.h"
 
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
 AxisWheel::AxisWheel() {}
 
 // Set steering wheel power
@@ -20,7 +22,7 @@ void AxisWheel::setupTMC4671(){
     driver->init();
 
     tmc4671->setActualPosition(0);
-    float angle = 360 * this->tmc4671->getEncoder()->getPos_f();
+    float angle = 360 * tmc4671->getEncoder()->getPos_f();
     this->resetMetrics(angle);
 }
 
@@ -40,11 +42,11 @@ std::pair<int32_t, float> AxisWheel::scaleEncoderValue(float angle, uint16_t max
         return std::make_pair<int32_t, float>(0x7FFF, 0.0);
     }
 
-    int32_t value = (0xFFFF / float(maxDegrees) * angle);
+    int32_t value = ((float)0xFFFF / (float)maxDegrees) * angle;
     float value_f = (2.0 / (float)maxDegrees) * angle; // normalize value to the range [-1.0, 1.0]
 
-    value = std::max<int32_t>(-0x7FFF, std::min<int32_t>(value, 0x7FFF));
-    value_f = std::max(-1.0f, std::min(value_f, 1.0f));
+    // value = std::max<int32_t>(-0x7FFF, std::min<int32_t>(value, 0x7FFF));
+    // value_f = std::max(-1.0f, std::min(value_f, 1.0f));
 
     return {value, value_f};
 }
@@ -56,17 +58,34 @@ void AxisWheel::updateDriverTorque(){
     if(tmc4671->getEncoder() == nullptr){
         return;
     }
+    // float angle = 360 * tmc4671->getEncoder()->getPos_f();
 
-    float angle = 360 * tmc4671->getEncoder()->getPos_f();
-    updateMetrics(angle);
+    // updateMetrics(angle);
+
+    // uint8_t report[3];
+    // int16_t axisValue = (int16_t)metric.current.position;
+    // report[0] = 0x01; // Report ID (1)
+    // report[1] = axisValue & 0xFF; // LSB osi X
+    // report[2] = (axisValue >> 8) & 0xFF; // MSB osi X
+    HIDreportIn.reportId = 0x01;
+    HIDreportIn.axisX = (int16_t)metric.current.position;
+
+    // if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) != USBD_OK) {
+    // if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&HIDreportIn, sizeof(HIDreportIn)) != USBD_OK) {
+    //     HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+    // }
+    // else {
+    //     HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+    // }
 
     int32_t totalTorque = 0;
-    calculateStaticAxisEffects();
-    getAxisTotalTorque(&totalTorque);
+    // calculateStaticAxisEffects();
+    // bool torqueChanged = getAxisTotalTorque(&totalTorque);
 
-    if(tmc4671->isInitialized()){
-        tmc4671->turn(totalTorque);
-    }
+    // if(/*torqueChanged &&*/ tmc4671->isInitialized()){
+        // tmc4671->turn(totalTorque);
+        // tmc4671->turn(4000);
+    // }
 }
 
 // Resets the metrics based on position in degrees
@@ -93,7 +112,7 @@ void AxisWheel::updateMetrics(float new_position) {
 
 // Returns force of idle center spring (FFB off) based on position
 int32_t AxisWheel::getIdleSpringForce(){
-    return clip<int32_t,int32_t>((int32_t)(-metric.current.position * idleCenterSpringFactor), -idleCenterSpringClip, idleCenterSpringClip);
+    return clip<int32_t,int32_t>((int32_t)(-metric.current.position * idleCenterSpringFactor), -8000, 8000);
 }
 
 // Change the strength of the idle spring
@@ -105,7 +124,7 @@ void AxisWheel::changeIdleSpringStrength(uint8_t springStrength) {
         idleCenterSpring = true;
     }
     idleCenterSpringStrength = springStrength;
-    idleCenterSpringClip = clip<int32_t,int32_t>((int32_t)springStrength, 0, 10000);
+    idleCenterSpringClip = clip<int32_t,int32_t>((int32_t)springStrength*35, 0, 10000);
     idleCenterSpringFactor = 0.5f + ((float)springStrength * 0.01f);
 }
 
@@ -167,7 +186,7 @@ void AxisWheel::calculateStaticAxisEffects(){
     // axisEffectTorque -= clip<float, int32_t>(velocityFiltered, -internalEffectForceClip, internalEffectForceClip);
 }
 
-void AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
+bool AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
     int32_t torque = 0; // In future start with game effect tourqe istead of 0 and multiply it by 80% to have a margin for soft-lock
     torque += axisEffectTorque;
     torque += getAndUpdateSoftLock();
@@ -176,4 +195,7 @@ void AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
     metric.current.torque = torque;
     torque = clip<int32_t, int32_t>(torque, -power, power);
     *totalTorque = torque;
+
+    // if the torque changed return true
+    return (metric.current.torque != metric.previous.torque);
 }

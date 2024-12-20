@@ -60,6 +60,7 @@ void TMC4671_Driver::init()
 	setStatusMask(statusMask);
 
 	setPids(&pidConfig);
+	setPidLimits(pidLimits);
 	uint8_t flags = tmc4671_readRegister(TMC4671_STATUS_FLAGS);
 	this->statusFlags.asInt = flags;
 
@@ -69,9 +70,25 @@ void TMC4671_Driver::init()
 	while(!encoderConfig.isAligned){
 		setupEncoder();
 	}
-
+	setPWM(PwmMode::PWM_FOC);
+	setDriverState(DRIVER_ENABLE);
 	setMotionMode(MotionMode::stopped);
-	isDriverInitialized = true;
+	// setPhiEType(PhiE::ext);
+	// tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
+	// tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
+
+	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
+		setTargetVelocity(vel);
+		HAL_Delay(2);
+	}
+	setTargetVelocity(0);
+	// int32_t targetVel = tmc4671_fieldRead(TMC4671_PID_VELOCITY_TARGET_FIELD);
+	// if(targetVel != 1000){
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// }
+
+//	setMotionMode(MotionMode::stopped);
+	// isDriverInitialized = true;
 
 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
@@ -80,12 +97,61 @@ void TMC4671_Driver::init()
 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+
+	readFlags(true);
+	if (statusFlags.flags.pid_x_target_limit ||
+        statusFlags.flags.pid_x_target_ddt_limit ||
+        statusFlags.flags.pid_x_errsum_limit ||
+        statusFlags.flags.pid_x_output_limit ||
+        statusFlags.flags.pid_v_target_limit ||
+        statusFlags.flags.pid_v_target_ddt_limit ||
+        statusFlags.flags.pid_v_errsum_limit ||
+        statusFlags.flags.pid_v_output_limit ||
+        statusFlags.flags.pid_id_target_limit ||
+        statusFlags.flags.pid_id_target_ddt_limit ||
+        statusFlags.flags.pid_id_errsum_limit ||
+        statusFlags.flags.pid_id_output_limit ||
+        statusFlags.flags.pid_iq_target_limit ||
+        statusFlags.flags.pid_iq_target_ddt_limit ||
+        statusFlags.flags.pid_iq_errsum_limit ||
+        statusFlags.flags.pid_iq_output_limit ||
+        statusFlags.flags.ipark_cirlim_limit_u_d ||
+        statusFlags.flags.ipark_cirlim_limit_u_q ||
+        statusFlags.flags.ipark_cirlim_limit_u_r ||
+        statusFlags.flags.not_PLL_locked ||
+        statusFlags.flags.ref_sw_r ||
+        statusFlags.flags.ref_sw_h ||
+        statusFlags.flags.ref_sw_l ||
+        statusFlags.flags.pwm_min ||
+        statusFlags.flags.pwm_max ||
+        statusFlags.flags.adc_i_clipped ||
+        statusFlags.flags.adc_aenc_clipped ||
+        statusFlags.flags.ENC_N ||
+        statusFlags.flags.ENC2_N ||
+        statusFlags.flags.AENC_N ||
+        statusFlags.flags.wd_err
+	) {
+		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	}
+	else {
+		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+	}
+	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
+		setTargetVelocity(vel);
+		HAL_Delay(2);
+	}
+	// int32_t velError = tmc4671_fieldRead(TMC4671_PID_VELOCITY_ERROR_FIELD);
+	
+	// if(velError < 0xFFF && velError > 0xFF ){
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// }
+	// TMC4671_PWM_IN_RAW_FIELD
 }
 
 void TMC4671_Driver::deInit(void) {
+	setDriverState(DRIVER_DISABLE);
 	setMotionMode(MotionMode::stopped);
 	setPWM(PwmMode::off);
-	setDriverState(DRIVER_DISABLE);
 }
 
 uint32_t TMC4671_Driver::rotate(int32_t velocity) {
@@ -121,9 +187,11 @@ uint32_t TMC4671_Driver::moveTo(int32_t position) {
 void TMC4671_Driver::turn(int16_t power) {
 	if(!this->isInitialized())
 		return;
-	int32_t flux = 0;
+	// int32_t flux = 0;
+	
 
-	setFluxTorque(flux, power);
+	// setFluxTorque(0, power);
+	// setTargetVelocity(power/2);
 }
 
 void TMC4671_Driver::moveByAngle(int16_t angle) {
@@ -186,12 +254,17 @@ void TMC4671_Driver::setCpr(uint32_t cpr){
 
 // Changes actual multi turn position for positioning
 void TMC4671_Driver::setActualPosition(int32_t pos){
-	tmc4671_fieldWrite(TMC4671_PID_POSITION_ACTUAL_FIELD, (uint32_t)pos);
+	tmc4671_writeRegister(TMC4671_PID_POSITION_ACTUAL, (uint32_t)pos);
 }
 
 // Returns actual multi turn position from tmc
 int32_t TMC4671_Driver::getActualPosition(){
-	return (int32_t)tmc4671_fieldRead(TMC4671_PID_POSITION_ACTUAL_FIELD);
+	// Upper 16 bits are counted revolutions of the encoder
+	// Lower 16 bits are position within one rotation (0 - CPR)
+	// Any position comfing from a encoder is mapped to the 2^16 (65536) steps range
+	int32_t pid_position_actual = (int32_t)tmc4671_readRegister(TMC4671_PID_POSITION_ACTUAL);
+
+	return pid_position_actual;
 }
 
 int32_t TMC4671_Driver::getAbsolutePosition(){
@@ -351,10 +424,10 @@ void TMC4671_Driver::estimateABNparams(){
 	encoderConfig.rdir = rcount > c/2;
 
 	if(npol != encoderConfig.npol){ // Invert dir if polarity was reversed TODO correct? likely wrong at the moment
-		encoderConfig.rdir = !encoderConfig.rdir;
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-		HAL_Delay(300);
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+		// encoderConfig.rdir = !encoderConfig.rdir;
+		// HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+		// HAL_Delay(300);
+		// HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
 	}
 
 
@@ -396,7 +469,7 @@ bool TMC4671_Driver::checkEncoder(){
 	setPhiE_ext(startAngle);
 
 	// Ramp up flux
-	for(int16_t flux = 0; flux <= 2*this->initPower/3; flux+=20){
+	for(int16_t flux = 0; flux <= this->initPower; flux+=20){
 		setFluxTorque(flux, 0);
 		HAL_Delay(2);
 	}
@@ -495,14 +568,14 @@ bool TMC4671_Driver::checkEncoder(){
 	if(revCount > maxcount){ // Encoder seems reversed
 		// reverse encoder
 		if(getEncoderType() == EncoderType::abn){
-			this->encoderConfig.rdir = !this->encoderConfig.rdir;
+			// this->encoderConfig.rdir = !this->encoderConfig.rdir;
 //			this->encoderConfig.apol = !this->encoderConfig.apol;
 //			this->encoderConfig.bpol = !this->encoderConfig.bpol;
 //			this->encoderConfig.npol = !this->encoderConfig.npol;
 			HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 			HAL_Delay(300);
 			HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-			tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, this->encoderConfig.rdir);
+			// tmc4671_fieldWrite(TMC4671_ABN_DIRECTION_FIELD, this->encoderConfig.rdir);
 //			tmc4671_fieldWrite(TMC4671_ABN_APOL_FIELD, this->encoderConfig.apol);
 //			tmc4671_fieldWrite(TMC4671_ABN_BPOL_FIELD, this->encoderConfig.bpol);
 //			tmc4671_fieldWrite(TMC4671_ABN_NPOL_FIELD, this->encoderConfig.npol);
@@ -606,7 +679,7 @@ void TMC4671_Driver::powerInitEncoder(int16_t power){
 }
 
 void TMC4671_Driver::zeroAbnUsingPhiM(bool offsetPhiE){
-	int32_t npos = tmc4671_readRegister(TMC4671_ABN_DECODER_COUNT_N); // raw encoder counts at index hit
+	int32_t npos = (int32_t)(TMC4671_ABN_DECODER_COUNT_N); // raw encoder counts at index hit
 	int32_t npos_M = (npos * 0xffff) / encoderConfig.cpr; // Scaled encoder angle at index
 	encoderConfig.phiMoffset = -npos_M;
 
@@ -636,9 +709,7 @@ bool TMC4671_Driver::calibrateAdcOffset(uint16_t time){
 	HAL_Delay(100); // Wait a bit before sampling
 	uint16_t lastrawA = this->adcConfig.adc_I0_offset, lastrawB = this->adcConfig.adc_I1_offset;
 
-	//pulseClipLed(); // Turn on led
 	// Disable drivers and measure many samples of zero current
-	//enablePin.reset();
 	uint32_t tick = HAL_GetTick();
 	while(HAL_GetTick() - tick < measuretime_idle){ // Measure idle
 		tmc4671_writeRegister(TMC4671_ADC_RAW_ADDR, 0); // Read raw adc
@@ -654,22 +725,13 @@ bool TMC4671_Driver::calibrateAdcOffset(uint16_t time){
 			lastrawA = rawA;
 			lastrawB = rawB;
 		}
-//		uint32_t lastMicros = micros();
-//		while(micros()-lastMicros < 100){} // Wait 100µs at least
 	}
-	//enablePin.set();
 	int32_t offsetAidle = totalA / (measurements_idle);
 	int32_t offsetBidle = totalB / (measurements_idle);
 
 	// Check if offsets are in a valid range
 	if(totalA < 100 || totalB < 100 || ((abs(offsetAidle - 0x7fff) > TMC_ADCOFFSETFAIL) || (abs(offsetBidle - 0x7fff) > TMC_ADCOFFSETFAIL)) ){
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-//		HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
-//		HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
-//		ErrorHandler::addError(Error(ErrorCode::adcCalibrationError,ErrorType::critical,"TMC ADC offset calibration failed."));
-//		blinkErrLed(100, 0); // Blink forever
-//		setPwm(TMC_PwmMode::off); //Disable pwm
-//		this->changeState(TMC_ControlState::HardError);
+		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);;
 		this->adcConfig.adcCalibrated = false;
 		return false; // An adc or shunt amp is likely broken. do not proceed.
 	}
@@ -698,12 +760,17 @@ void TMC4671_Driver::setMotorTypeAndPoles(MotorType motor, uint16_t poles){
 	if(motor == MotorType::DC){
 		poles = 1;
 	}
+
+	bool enableSvPwm = false; // Space vector pwm is only for 3 phase motors
+	if(motor == MotorType::BLDC){
+		enableSvPwm = true;
+	}
 	this->motorType = motor;
 	this->encoderConfig.pole_pairs = poles;
 
 	tmc4671_fieldWrite(TMC4671_N_POLE_PAIRS_FIELD, poles);
 	tmc4671_fieldWrite(TMC4671_MOTOR_TYPE_FIELD, (uint8_t)motor);
-
+	tmc4671_fieldWrite(TMC4671_PWM_SV_FIELD, enableSvPwm);
 }
 
 void TMC4671_Driver::setHallConfig(HallConfig* hallConfig_p){
@@ -875,10 +942,33 @@ void TMC4671_Driver::setFluxTorque(int16_t flux, int16_t torque){
 	tmc4671_fieldWrite(TMC4671_PID_TORQUE_TARGET_FIELD, torque);
 }
 
+void TMC4671_Driver::setTargetVelocity(int32_t vel){
+	if(curr_motionMode != MotionMode::velocity){
+		setMotionMode(MotionMode::velocity);
+	}
+	tmc4671_writeRegister(TMC4671_PID_VELOCITY_TARGET,vel);
+}
+
+void TMC4671_Driver::setTargetPos(int32_t pos){
+	if(curr_motionMode != MotionMode::position){
+		setMotionMode(MotionMode::position);
+	}
+	tmc4671_writeRegister(0x68,pos);
+}
+
 void TMC4671_Driver::setStatusFlags(StatusFlags flag){
 	tmc4671_writeRegister(TMC4671_STATUS_MASK, flag.asInt);
 }
 
 void TMC4671_Driver::setStatusMask(StatusFlags mask){
 	tmc4671_writeRegister(TMC4671_STATUS_MASK, mask.asInt);
+}
+
+StatusFlags TMC4671_Driver::readFlags(bool maskedOnly){
+	uint32_t flags = tmc4671_readRegister(0x7C);
+	if(maskedOnly){
+		flags = flags & this->statusMask.asInt;
+	}
+	this->statusFlags.asInt = flags; // Only set flags that are marked to trigger a notification
+	return statusFlags;
 }

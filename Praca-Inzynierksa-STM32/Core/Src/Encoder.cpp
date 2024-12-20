@@ -47,7 +47,7 @@ float Encoder::getPos_f() {
         return 0.0;
     }
 
-    return (float)this->getActualPosition() / (float)this->getCpr();
+    return (float)this->getActualPosition() / (float)0xFFFF;
 }
 
 // Get the floating-point representation of the absolute position
@@ -56,7 +56,7 @@ float Encoder::getPosAbs_f() {
         return 0.0;
     }
 
-    return (float)this->getAbsolutePosition() / (float)this->getCpr();
+    return (float)this->getAbsolutePosition() / (float)0xFFFF;
 }
 
 // Check if the encoder is ready

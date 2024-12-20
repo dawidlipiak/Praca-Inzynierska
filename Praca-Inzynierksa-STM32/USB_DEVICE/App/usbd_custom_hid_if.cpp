@@ -105,7 +105,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 		0x16, 0x00, 0x80,       // Logical Minimum (-32768)
 		0x26, 0xFF, 0x7F,       // Logical Maximum (32767)
 		0x75, 0x10,             // Report Size (16)
-		0x95, 0x08,             // Report Count (1)
+		0x95, 0x01,             // Report Count (1)
 		0x81, 0x02,             // Input (Data,Var,Abs)
 	0xc0,                   // End Collection (Physical)
 
