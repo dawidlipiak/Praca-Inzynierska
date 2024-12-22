@@ -58,9 +58,9 @@ void AxisWheel::updateDriverTorque(){
     if(tmc4671->getEncoder() == nullptr){
         return;
     }
-    // float angle = 360 * tmc4671->getEncoder()->getPos_f();
+    float angle = 360 * tmc4671->getEncoder()->getPos_f();
 
-    // updateMetrics(angle);
+    updateMetrics(angle);
 
     // uint8_t report[3];
     // int16_t axisValue = (int16_t)metric.current.position;
@@ -71,21 +71,20 @@ void AxisWheel::updateDriverTorque(){
     HIDreportIn.axisX = (int16_t)metric.current.position;
 
     // if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) != USBD_OK) {
-    // if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&HIDreportIn, sizeof(HIDreportIn)) != USBD_OK) {
-    //     HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-    // }
-    // else {
-    //     HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-    // }
+    if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&HIDreportIn, sizeof(HIDreportIn)) != USBD_OK) {
+        HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+    }
+    else {
+        HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+    }
 
     int32_t totalTorque = 0;
-    // calculateStaticAxisEffects();
-    // bool torqueChanged = getAxisTotalTorque(&totalTorque);
+    calculateStaticAxisEffects();
+    bool torqueChanged = getAxisTotalTorque(&totalTorque);
 
-    // if(/*torqueChanged &&*/ tmc4671->isInitialized()){
+    if(torqueChanged && tmc4671->isInitialized()){
         // tmc4671->turn(totalTorque);
-        // tmc4671->turn(4000);
-    // }
+    }
 }
 
 // Resets the metrics based on position in degrees
@@ -188,7 +187,7 @@ void AxisWheel::calculateStaticAxisEffects(){
 
 bool AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
     int32_t torque = 0; // In future start with game effect tourqe istead of 0 and multiply it by 80% to have a margin for soft-lock
-    torque += axisEffectTorque;
+    // torque += axisEffectTorque;
     torque += getAndUpdateSoftLock();
     torque *= powerTorqueFactor;
 

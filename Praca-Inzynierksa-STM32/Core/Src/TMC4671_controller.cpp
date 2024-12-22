@@ -73,22 +73,8 @@ void TMC4671_Driver::init()
 	setPWM(PwmMode::PWM_FOC);
 	setDriverState(DRIVER_ENABLE);
 	setMotionMode(MotionMode::stopped);
-	// setPhiEType(PhiE::ext);
-	// tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
-	// tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
 
-	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
-		setTargetVelocity(vel);
-		HAL_Delay(2);
-	}
-	setTargetVelocity(0);
-	// int32_t targetVel = tmc4671_fieldRead(TMC4671_PID_VELOCITY_TARGET_FIELD);
-	// if(targetVel != 1000){
-	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-	// }
-
-//	setMotionMode(MotionMode::stopped);
-	// isDriverInitialized = true;
+	isDriverInitialized = true;
 
 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
@@ -136,10 +122,7 @@ void TMC4671_Driver::init()
 	else {
 		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
 	}
-	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
-		setTargetVelocity(vel);
-		HAL_Delay(2);
-	}
+
 	// int32_t velError = tmc4671_fieldRead(TMC4671_PID_VELOCITY_ERROR_FIELD);
 	
 	// if(velError < 0xFFF && velError > 0xFF ){
