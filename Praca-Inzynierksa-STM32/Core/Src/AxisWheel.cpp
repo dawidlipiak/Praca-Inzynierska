@@ -22,8 +22,8 @@ void AxisWheel::setupTMC4671(){
     driver->init();
 
     tmc4671->setActualPosition(0);
-    float angle = 360 * tmc4671->getEncoder()->getPos_f();
-    this->resetMetrics(angle);
+    // float angle = 360 * tmc4671->getEncoder()->getPos_f();
+    // this->resetMetrics(angle);
 }
 
 // Set the maximum degrees of rotation

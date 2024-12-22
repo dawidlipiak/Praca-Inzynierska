@@ -104,21 +104,23 @@ int main(void)
   HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
   HAL_Delay(100);
+  TMC4671_Driver test;
+  test.init();
   /* USER CODE END 2 */
-  axisWheel.setupTMC4671();
-  HAL_TIM_Base_Start_IT(&htim10);
+  // axisWheel.setupTMC4671();
+  // HAL_TIM_Base_Start_IT(&htim10);
 //  HAL_TIM_Base_Start_IT(&htim10);
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	HAL_Delay(1);
-    /* USER CODE END WHILE */
-	  HAL_Delay(1);
-	  axisWheel.updateDriverTorque();
-//	  tmc4671.periodicJob();
-    /* USER CODE BEGIN 3 */
+// //	HAL_Delay(1);
+//     /* USER CODE END WHILE */
+// 	  HAL_Delay(1);
+// 	  axisWheel.updateDriverTorque();
+// //	  tmc4671.periodicJob();
+//     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }

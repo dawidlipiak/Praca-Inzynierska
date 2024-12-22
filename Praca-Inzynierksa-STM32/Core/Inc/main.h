@@ -61,6 +61,8 @@ void Error_Handler(void);
 #define SPI1_SS1_GPIO_Port GPIOA
 #define DRV_ENABLE_Pin GPIO_PIN_7
 #define DRV_ENABLE_GPIO_Port GPIOE
+#define BRAKE_CTRL_Pin GPIO_PIN_10
+#define BRAKE_CTRL_GPIO_Port GPIOE
 #define LED_SYS_Pin GPIO_PIN_7
 #define LED_SYS_GPIO_Port GPIOD
 #define LED_CLIP_Pin GPIO_PIN_0

@@ -7,139 +7,183 @@
 
 
 #include <TMC4671_controller.h>
+#include "usbd_customhid.h"
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 // TMC4671_Driver tmc4671;
 
-void TMC4671_Driver::init()
-{
-	setDriverState(DRIVER_DISABLE);
-	// Ping driver
-	tmc4671_writeRegister(TMC4671_CHIPINFO_ADDR, 0);
-	if (tmc4671_readRegister(TMC4671_CHIPINFO_DATA) == 0x34363731) {
-		HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
-		HAL_Delay(200);
-		HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
-	}
-    else {
-    	// TODO: error handler
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-		setDriverState(DRIVER_DISABLE);
-	  return;
-	}
+TMC4671_Driver::TMC4671_Driver() {
 
-	// Check TMC version if it is not ES
-	tmc4671_writeRegister(TMC4671_CHIPINFO_ADDR, 1);
-	if(tmc4671_readRegister(TMC4671_CHIPINFO_DATA) == 0x00010000){
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
-		setDriverState(DRIVER_DISABLE);
-		return;
-	}
+}
+
+void TMC4671_Driver::init()
+{	
+	// setDriverState(DRIVER_DISABLE);
+	// // Ping driver
+	// tmc4671_writeRegister(TMC4671_CHIPINFO_ADDR, 0);
+	// uint32_t chipInfo = tmc4671_readRegister(TMC4671_CHIPINFO_DATA);
+	// uint8_t buffer[64]={0};
+    // buffer[0] = (uint8_t)(chipInfo & 0xFF);         // LSB
+    // buffer[1] = (uint8_t)((chipInfo >> 8) & 0xFF);
+    // buffer[2] = (uint8_t)((chipInfo >> 16) & 0xFF);
+    // buffer[3] = (uint8_t)((chipInfo >> 24) & 0xFF);
+	// USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)buffer, sizeof(buffer));
+	// chipInfo = 0x12345678;
+	// buffer[0] = (uint8_t)(chipInfo & 0xFF);         // LSB
+    // buffer[1] = (uint8_t)((chipInfo >> 8) & 0xFF);
+    // buffer[2] = (uint8_t)((chipInfo >> 16) & 0xFF);
+    // buffer[3] = (uint8_t)((chipInfo >> 24) & 0xFF);
+	// USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)buffer, sizeof(buffer));
+
+	// if (tmc4671_readRegister(TMC4671_CHIPINFO_DATA) == 0x34363731) {
+	// 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
+	// 	HAL_Delay(200);
+	// 	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
+	// }
+    // else {
+    // 	// TODO: error handler
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// 	setDriverState(DRIVER_DISABLE);
+	//   return;
+	// }
+
+	// // Check TMC version if it is not ES
+	// tmc4671_writeRegister(TMC4671_CHIPINFO_ADDR, 1);
+	// if(tmc4671_readRegister(TMC4671_CHIPINFO_DATA) == 0x00010000){
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// 	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
+	// 	setDriverState(DRIVER_DISABLE);
+	// 	return;
+	// }
 
 	// Setup main constants
-	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_TARGET, 0);
-	setPWM(PwmMode::off ,pwmCnt, bbmL, bbmH);
-	setMotorTypeAndPoles(motorType, encoderConfig.pole_pairs);
-	setPhiEType(phiEType);
-	setHallConfig(&hallConfig); //enables hall filter and masking
-	initAdc(&adcConfig);
-
-	if(!calibrateAdcOffset(300)){
-		// ADC or shunt amp is broken!
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-		setDriverState(DRIVER_DISABLE);
-		return;
-	}
-
-	setAdcBrakeLimits(brakeLimLow, brakeLimHigh);
-
-	// Enable adc clipping and pll errors
-	statusMask.asInt = 0;
-	statusMask.flags.adc_i_clipped = 1;
-	statusMask.flags.not_PLL_locked = 1;
-	setStatusMask(statusMask);
-
-	setPids(&pidConfig);
-	setPidLimits(pidLimits);
-	uint8_t flags = tmc4671_readRegister(TMC4671_STATUS_FLAGS);
-	this->statusFlags.asInt = flags;
-
+	// tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_TARGET, 0);
+	setPWM(PwmMode::PWM_FOC ,3999, 25, 25);
+	setMotorTypeAndPoles(motorType, 4);
+	tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_openloop);
+	tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_openloop);
 	setDriverState(DRIVER_ENABLE);
-	setPWM(PwmMode::PWM_FOC);
+	setFluxTorque(3000,0);
+	int16_t oldPhiE = getPhiE();
+	setPhiEType(PhiE::openloop);
+	tmc4671_fieldWrite(TMC4671_OPENLOOP_PHI_DIRECTION_FIELD, 0);
+	tmc4671_writeRegister(TMC4671_OPENLOOP_PHI, oldPhiE);
 
-	while(!encoderConfig.isAligned){
-		setupEncoder();
-	}
-	setPWM(PwmMode::PWM_FOC);
-	setDriverState(DRIVER_ENABLE);
-	setMotionMode(MotionMode::stopped);
+	// tmc4671_writeRegister(TMC4671_PWM_BBM_H_BBM_L, 0);
+	tmc4671_fieldWrite(TMC4671_MODE_MOTION_FIELD, 8);
+	tmc4671_fieldWrite(TMC4671_MODE_RAMP_FIELD, 0);
+	tmc4671_fieldWrite(TMC4671_MODE_FF_FIELD, 0);
+	tmc4671_fieldWrite(TMC4671_MODE_PID_SMPL_FIELD, 0);
+	tmc4671_fieldWrite(TMC4671_MODE_PID_TYPE_FIELD, 0);
+	tmc4671_fieldWrite(TMC4671_PHI_E_EXT_FIELD, 0);
+
+
+	setMotionMode(MotionMode::uqudext);
+	tmc4671_fieldWrite(TMC4671_UD_EXT_FIELD, 5000);
+	tmc4671_fieldWrite(TMC4671_UQ_EXT_FIELD, 0);
+
+
+	// tmc4671_fieldWrite(TMC4671_OPENLOOP_VELOCITY_TARGET_FIELD, 5);
+	// tmc4671_fieldWrite(TMC4671_OPENLOOP_ACCELERATION_FIELD, 10);
+	tmc4671_writeRegister(TMC4671_OPENLOOP_VELOCITY_TARGET, 20);
+	tmc4671_writeRegister(TMC4671_OPENLOOP_ACCELERATION, 10);
+	
+
+	// setHallConfig(&hallConfig); //enables hall filter and masking
+	// initAdc(&adcConfig);
+
+	// if(!calibrateAdcOffset(300)){
+	// 	// ADC or shunt amp is broken!
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// 	setDriverState(DRIVER_DISABLE);
+	// 	return;
+	// }
+
+	// setAdcBrakeLimits(brakeLimLow, brakeLimHigh);
+
+	// // Enable adc clipping and pll errors
+	// statusMask.asInt = 0;
+	// statusMask.flags.adc_i_clipped = 1;
+	// statusMask.flags.not_PLL_locked = 1;
+	// setStatusMask(statusMask);
+
+	// setPids(&pidConfig);
+	// setPidLimits(pidLimits);
+	// uint8_t flags = tmc4671_readRegister(TMC4671_STATUS_FLAGS);
+	// this->statusFlags.asInt = flags;
+
+	// setDriverState(DRIVER_ENABLE);
+	// setPWM(PwmMode::PWM_FOC);
+
+	// while(!encoderConfig.isAligned){
+	// 	setupEncoder();
+	// }
+	// setPWM(PwmMode::PWM_FOC);
+	// setDriverState(DRIVER_ENABLE);
+	// setMotionMode(MotionMode::stopped);
 	// setPhiEType(PhiE::ext);
 	// tmc4671_fieldWrite(TMC4671_POSITION_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
 	// tmc4671_fieldWrite(TMC4671_VELOCITY_SELECTION_FIELD, (uint8_t)PosAndVelSelection::PhiE_ext);
 
-	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
-		setTargetVelocity(vel);
-		HAL_Delay(2);
-	}
-	setTargetVelocity(0);
+	// for(uint16_t vel = 50; vel <= 3000; vel+= 20){
+	// 	setTargetVelocity(vel);
+	// 	HAL_Delay(2);
+	// }
+	// setTargetVelocity(0);
 	// int32_t targetVel = tmc4671_fieldRead(TMC4671_PID_VELOCITY_TARGET_FIELD);
 	// if(targetVel != 1000){
 	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
 	// }
 
-//	setMotionMode(MotionMode::stopped);
-	// isDriverInitialized = true;
 
-	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-	HAL_Delay(400);
-	HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
+	// HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
+	// HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// HAL_Delay(400);
+	// HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
 
-	readFlags(true);
-	if (statusFlags.flags.pid_x_target_limit ||
-        statusFlags.flags.pid_x_target_ddt_limit ||
-        statusFlags.flags.pid_x_errsum_limit ||
-        statusFlags.flags.pid_x_output_limit ||
-        statusFlags.flags.pid_v_target_limit ||
-        statusFlags.flags.pid_v_target_ddt_limit ||
-        statusFlags.flags.pid_v_errsum_limit ||
-        statusFlags.flags.pid_v_output_limit ||
-        statusFlags.flags.pid_id_target_limit ||
-        statusFlags.flags.pid_id_target_ddt_limit ||
-        statusFlags.flags.pid_id_errsum_limit ||
-        statusFlags.flags.pid_id_output_limit ||
-        statusFlags.flags.pid_iq_target_limit ||
-        statusFlags.flags.pid_iq_target_ddt_limit ||
-        statusFlags.flags.pid_iq_errsum_limit ||
-        statusFlags.flags.pid_iq_output_limit ||
-        statusFlags.flags.ipark_cirlim_limit_u_d ||
-        statusFlags.flags.ipark_cirlim_limit_u_q ||
-        statusFlags.flags.ipark_cirlim_limit_u_r ||
-        statusFlags.flags.not_PLL_locked ||
-        statusFlags.flags.ref_sw_r ||
-        statusFlags.flags.ref_sw_h ||
-        statusFlags.flags.ref_sw_l ||
-        statusFlags.flags.pwm_min ||
-        statusFlags.flags.pwm_max ||
-        statusFlags.flags.adc_i_clipped ||
-        statusFlags.flags.adc_aenc_clipped ||
-        statusFlags.flags.ENC_N ||
-        statusFlags.flags.ENC2_N ||
-        statusFlags.flags.AENC_N ||
-        statusFlags.flags.wd_err
-	) {
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-	}
-	else {
-		HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-	}
-	for(uint16_t vel = 50; vel <= 3000; vel+= 20){
-		setTargetVelocity(vel);
-		HAL_Delay(2);
-	}
+	// readFlags(true);
+	// if (statusFlags.flags.pid_x_target_limit ||
+    //     statusFlags.flags.pid_x_target_ddt_limit ||
+    //     statusFlags.flags.pid_x_errsum_limit ||
+    //     statusFlags.flags.pid_x_output_limit ||
+    //     statusFlags.flags.pid_v_target_limit ||
+    //     statusFlags.flags.pid_v_target_ddt_limit ||
+    //     statusFlags.flags.pid_v_errsum_limit ||
+    //     statusFlags.flags.pid_v_output_limit ||
+    //     statusFlags.flags.pid_id_target_limit ||
+    //     statusFlags.flags.pid_id_target_ddt_limit ||
+    //     statusFlags.flags.pid_id_errsum_limit ||
+    //     statusFlags.flags.pid_id_output_limit ||
+    //     statusFlags.flags.pid_iq_target_limit ||
+    //     statusFlags.flags.pid_iq_target_ddt_limit ||
+    //     statusFlags.flags.pid_iq_errsum_limit ||
+    //     statusFlags.flags.pid_iq_output_limit ||
+    //     statusFlags.flags.ipark_cirlim_limit_u_d ||
+    //     statusFlags.flags.ipark_cirlim_limit_u_q ||
+    //     statusFlags.flags.ipark_cirlim_limit_u_r ||
+    //     statusFlags.flags.not_PLL_locked ||
+    //     statusFlags.flags.ref_sw_r ||
+    //     statusFlags.flags.ref_sw_h ||
+    //     statusFlags.flags.ref_sw_l ||
+    //     statusFlags.flags.pwm_min ||
+    //     statusFlags.flags.pwm_max ||
+    //     statusFlags.flags.adc_i_clipped ||
+    //     statusFlags.flags.adc_aenc_clipped ||
+    //     statusFlags.flags.ENC_N ||
+    //     statusFlags.flags.ENC2_N ||
+    //     statusFlags.flags.AENC_N ||
+    //     statusFlags.flags.wd_err
+	// ) {
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+	// }
+	// else {
+	// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+	// }
+
 	// int32_t velError = tmc4671_fieldRead(TMC4671_PID_VELOCITY_ERROR_FIELD);
 	
 	// if(velError < 0xFFF && velError > 0xFF ){
@@ -770,7 +814,7 @@ void TMC4671_Driver::setMotorTypeAndPoles(MotorType motor, uint16_t poles){
 
 	tmc4671_fieldWrite(TMC4671_N_POLE_PAIRS_FIELD, poles);
 	tmc4671_fieldWrite(TMC4671_MOTOR_TYPE_FIELD, (uint8_t)motor);
-	tmc4671_fieldWrite(TMC4671_PWM_SV_FIELD, enableSvPwm);
+	// tmc4671_fieldWrite(TMC4671_PWM_SV_FIELD, enableSvPwm);
 }
 
 void TMC4671_Driver::setHallConfig(HallConfig* hallConfig_p){
@@ -800,7 +844,7 @@ void TMC4671_Driver::setPWM(PwmMode pwmMode){
 }
 
 void TMC4671_Driver::setPWM(PwmMode pwmMode,uint16_t maxcnt,uint8_t bbmL,uint8_t bbmH){
-	maxcnt = clip(maxcnt, 255, 4095);
+	// maxcnt = clip(maxcnt, 255, 4095);
 	this->pwmMode = pwmMode;
 	this->pwmCnt = maxcnt;
 	this->bbmL = bbmL;

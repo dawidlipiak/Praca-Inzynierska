@@ -156,6 +156,7 @@ typedef enum {
 
 class TMC4671_Driver : Encoder {
 public:
+	TMC4671_Driver();
 	void init();
 	void deInit();
 	uint32_t rotate(int32_t velocity);
@@ -195,8 +196,8 @@ private:
 	uint16_t pwmCnt 			= 4095;
 	uint8_t bbmL				= 50;
 	uint8_t bbmH				= 50;
-	uint16_t brakeLimLow 		= 50700;
-	uint16_t brakeLimHigh 		= 50900;
+	uint16_t brakeLimLow 		= 0; //50700;
+	uint16_t brakeLimHigh 		= 0; //50900;
 	int16_t initPower 			= 7000; // Default current in setup routines ~ 7A
 	StatusFlags statusFlags 	= {0};
 	StatusFlags statusMask 		= {0};
