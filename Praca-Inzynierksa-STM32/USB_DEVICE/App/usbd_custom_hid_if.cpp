@@ -22,7 +22,8 @@
 #include "usbd_custom_hid_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-#include "TMC4671_controller.h"
+#include "AxisWheel.h"
+#include "config_commands.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,7 +76,6 @@
   */
 
 /* USER CODE BEGIN PRIVATE_MACRO */
-
 /* USER CODE END PRIVATE_MACRO */
 
 /**
@@ -258,7 +258,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 	   	0x75, 0x08,           	  // Report Size (8)
 	   	0x95, 0x01,           	  // Report Count (1)
 	   	0x91, 0x02,           	  // Output (Variable)
-	   	
+
 		0x09, 0x5B,           	// Usage (Attack Level)
 	   	0x09, 0x5D,           	// Usage (Fade Level)
 	 	0x16, 0x00, 0x00,         // Logical Minimum (0)
@@ -646,12 +646,34 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
 		0x95, 0x01,                   // Report Count (1)
 		0xB1, 0x03,                   // Feature (Constant, Variable)
 	0xC0, 				  // End Collection Datalink (logical)
-  0xC0    				// END_COLLECTION (Application)
+
+	// Configuration Report
+	0xA1, 0x02,             // Collection (Logical)
+		0x85, 0x14,             // Report ID (20) - Configuration Output Report  
+		0x09, 0x95,             // Usage (Device Control Report) 
+		0x15, 0x00,             // Logical Minimum (0)
+		0x26, 0xFF, 0xFF,       // Logical Maximum (65535)
+		0x75, 0x20,             // Report Size (32)
+		0x95, 0x01,             // Report Count (1)
+		0x91, 0x02,             // Output (Data,Var,Abs)
+	0xc0,                   // End Collection
+
+	0xA1, 0x02,             // Collection (Logical)
+		0x85, 0x15,             // Report ID (21) - Configuration Response Report
+		0x09, 0x96,             // Usage (Custom Device Control Response)
+		0x15, 0x00,             // Logical Minimum (0)
+		0x25, 0x7F,             // Logical Maximum (127) - ASCII range
+		0x75, 0x08,             // Report Size (8) - 8 bits per character
+		0x95, 0x14,             // Report Count (20) - Up to 20 ASCII characters
+		0x81, 0x02,             // Input (Data,Var,Abs)
+	0xc0,                   // End Collection
+
+	0xC0    				// END_COLLECTION (Application)
   /* USER CODE END 0 */
 };
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-
+//static uint8_t response_buffer[16];  // Buffer for sending responses
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -730,37 +752,20 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
 static int8_t CUSTOM_HID_OutEvent_FS(uint8_t* report_buffer)
 {
   /* USER CODE BEGIN 6 */
-
-  /* Start next USB packet transfer once data processing is completed */
   if (USBD_CUSTOM_HID_ReceivePacket(&hUsbDeviceFS) != (uint8_t)USBD_OK)
   {
     return -1;
   }
-
-//  if(HAL_GPIO_ReadPin(LED_ERR_GPIO_Port, LED_ERR_Pin) == GPIO_PIN_SET){
-// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-//  }
-//  else {
-// 	HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-//  }
-
-//  USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report_buffer, 0x08);
-
-//  memcpy(buffer, report_buffer, 0x08);
-  if (report_buffer[0] == 0x01)  // Zakładamy, że 0x01 to komenda dla obrotu w lewo
-  {
-//	  tmc4671.setMoveAngleFlag(true, 90);
-	  HAL_GPIO_TogglePin(LED_ERR_GPIO_Port, LED_ERR_Pin);
+  
+  // Check if this is a configuration command (Report ID 20)
+  if (report_buffer[0] == REPORT_ID_CONFIG) {
+	HAL_GPIO_TogglePin(LED_SYS_GPIO_Port, LED_SYS_Pin);
+    uint8_t cmd = report_buffer[1];
+    
+    // Maximum data length (4 byte report - 2 bytes header)
+	// Pass command and data portion of the buffer
+	AxisWheel::getInstance().handleHIDCommand(cmd, &report_buffer[3]);
   }
-  else if (report_buffer[0] == 0x02)  // Zakładamy, że 0x02 to komenda dla obrotu w prawo
-  {
-//	  tmc4671.setMoveAngleFlag(true, -90);
-	  HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
-  }
-
-//  buffer[0] = 0x01;
-//  USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, buffer, 0x08);
-
   return (USBD_OK);
   /* USER CODE END 6 */
 }

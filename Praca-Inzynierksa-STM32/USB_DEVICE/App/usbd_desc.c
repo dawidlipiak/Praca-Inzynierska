@@ -62,11 +62,11 @@
   * @{
   */
 
-#define USBD_VID     1155
+#define USBD_VID     4617
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "Dawid Lipiak"
-#define USBD_PID_FS     22352
-#define USBD_PRODUCT_STRING_FS     "Force Feedback Steering Wheel"
+#define USBD_PID_FS     65456
+#define USBD_PRODUCT_STRING_FS     "Steering Wheel"
 #define USBD_CONFIGURATION_STRING_FS     "Custom HID Config"
 #define USBD_INTERFACE_STRING_FS     "Custom HID Interface"
 

@@ -8,21 +8,18 @@ AxisWheel::AxisWheel() {}
 void AxisWheel::setPower(uint16_t power){
     this->power = power;
 
-    if(tmc4671 != nullptr){
-        tmc4671->setTorqueLimit(power);
-    }
+    tmc4671.setTorqueLimit(power);
 }
 
 TMC4671_Driver *AxisWheel::getDriver(){
-    return this->tmc4671.get();
+    return &tmc4671;
 }
 
 void AxisWheel::setupTMC4671(){
-    TMC4671_Driver* driver = static_cast<TMC4671_Driver*>(this->tmc4671.get());
-    driver->init();
+    tmc4671.init();
 
-    tmc4671->setActualPosition(0);
-    float angle = 360 * tmc4671->getEncoder()->getPos_f();
+    tmc4671.setActualPosition(0);
+    float angle = 360 * tmc4671.getEncoder()->getPos_f();
     this->resetMetrics(angle);
 }
 
@@ -51,39 +48,63 @@ std::pair<int32_t, float> AxisWheel::scaleEncoderValue(float angle, uint16_t max
     return {value, value_f};
 }
 
-void AxisWheel::updateDriverTorque(){
-    if(tmc4671 == nullptr){
+void AxisWheel::sendPositionReport() {
+    uint32_t currentTime = HAL_GetTick();
+    
+    // If we're trying to send too soon after last successful report
+    if (currentTime - lastReportTime < USB_REPORT_INTERVAL_MS) {
+        // Buffer the current position for next attempt
+        pendingHIDInputReport.reportId = REPORT_ID_WHEEL;
+        pendingHIDInputReport.axisX = (int16_t)metric.current.position;
+        reportPending = true;
         return;
     }
-    if(tmc4671->getEncoder() == nullptr){
+
+    // If we have a pending report, use that instead of current position
+    if (reportPending) {
+        HIDreportIn = pendingHIDInputReport;
+        reportPending = false;
+    } else {
+        HIDreportIn.reportId = REPORT_ID_WHEEL;
+        HIDreportIn.axisX = (int16_t)metric.current.position;
+    }
+
+    // Try to send the report with retries
+    USBD_StatusTypeDef status = USBD_FAIL;
+    for (uint8_t retry = 0; retry < USB_REPORT_RETRY_COUNT; retry++) {
+        status = (USBD_StatusTypeDef) USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, 
+                                                                 (uint8_t*)&HIDreportIn, 
+                                                                 sizeof(HIDreportIn));
+        if (status == USBD_OK) {
+            lastReportTime = currentTime;
+            HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
+            return;
+        }
+        // Small delay between retries
+        if (retry < USB_REPORT_RETRY_COUNT - 1) {
+            HAL_Delay(1);
+        }
+    }
+
+    // If we get here, all retries failed
+    HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
+}
+
+void AxisWheel::updateDriverTorque() {
+    if(tmc4671.getEncoder() == nullptr) {
         return;
     }
-    float angle = 360 * tmc4671->getEncoder()->getPos_f();
+    float angle = 360 * tmc4671.getEncoder()->getPos_f();
 
     updateMetrics(angle);
-
-    // uint8_t report[3];
-    // int16_t axisValue = (int16_t)metric.current.position;
-    // report[0] = 0x01; // Report ID (1)
-    // report[1] = axisValue & 0xFF; // LSB osi X
-    // report[2] = (axisValue >> 8) & 0xFF; // MSB osi X
-    HIDreportIn.reportId = 0x01;
-    HIDreportIn.axisX = (int16_t)metric.current.position;
-
-    // if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) != USBD_OK) {
-    if( USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&HIDreportIn, sizeof(HIDreportIn)) != USBD_OK) {
-        HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
-    }
-    else {
-        HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_RESET);
-    }
+    sendPositionReport();
 
     int32_t totalTorque = 0;
     calculateStaticAxisEffects();
     bool torqueChanged = getAxisTotalTorque(&totalTorque);
 
-    if(torqueChanged && tmc4671->isInitialized()){
-        // tmc4671->turn(totalTorque);
+    if(torqueChanged && tmc4671.isInitialized()) {
+        tmc4671.turn(totalTorque);
     }
 }
 
@@ -177,12 +198,12 @@ metric_t AxisWheel::getMetrics() {
 void AxisWheel::calculateStaticAxisEffects(){
     axisEffectTorque = 0;
 
-    if(!ffbOn){
+    if(!ffbOn && idleCenterSpring){
         axisEffectTorque += getIdleSpringForce();
     }
 
-    // float velocityFiltered = (metric.current.velocity) * (float)damperIntensity * AXIS_DAMPER_RATIO;
-    // axisEffectTorque -= clip<float, int32_t>(velocityFiltered, -internalEffectForceClip, internalEffectForceClip);
+    float velocityFiltered = (metric.current.velocity) * (float)damperIntensity * AXIS_DAMPER_RATIO;
+    axisEffectTorque -= clip<float, int32_t>(velocityFiltered, -internalEffectForceClip, internalEffectForceClip);
 }
 
 bool AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
@@ -197,4 +218,92 @@ bool AxisWheel::getAxisTotalTorque(int32_t* totalTorque){
 
     // if the torque changed return true
     return (metric.current.torque != metric.previous.torque);
+}
+
+void AxisWheel::handleHIDCommand(uint8_t cmd, uint8_t* data) {
+    switch(cmd) {
+        case CMD_INITIALIZE:
+            // Initialize doesn't need any data
+            pendingCommands.initialize = true;
+            HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
+            break;
+            
+        case CMD_SET_CENTER:
+            // Set center doesn't need any data
+            pendingCommands.setCenter = true;
+            HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
+            break;
+            
+        case CMD_SET_POWER: {
+            // Check if we have any data to read
+            if (data == nullptr) {
+                return;
+            }
+
+            // Power requires 2 bytes of data
+            // Read data as a byte array into the value
+            uint16_t power = (data[1] << 8) | data[0];
+                
+            // Validate power value range
+            if (power <= 10000) { // Maximum safe power value
+                pendingCommands.setPower = true;
+                pendingCommands.powerValue = power;
+                HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
+            }
+            break;
+        }
+            
+        case CMD_SET_SPRING: {
+            // Spring requires 1 byte of data
+            pendingCommands.setSpring = true;
+            pendingCommands.springValue = data[0]; // 0-255 range is valid for spring
+            HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
+
+            break;
+        }
+            
+        case CMD_SET_MAX_ANGLE: {
+            // Max angle requires 2 bytes of data
+            uint16_t maxAngle = (data[1] << 8) | data[0];
+            
+            // Validate max angle value range
+            if (maxAngle <= 1440) { // Maximum safe angle value
+                pendingCommands.setMaxAngle = true;
+                pendingCommands.maxAngleValue = maxAngle;
+                HAL_GPIO_TogglePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin);
+            }
+            break;
+        }
+    }
+}
+
+void AxisWheel::processCommands() {
+    // Process any pending commands
+    if (pendingCommands.initialize) {
+        setupTMC4671();
+        pendingCommands.initialize = false;
+    }
+    
+    if (pendingCommands.setCenter) {
+        this->tmc4671.getEncoder()->setActualPosition(0);
+        pendingCommands.setCenter = false;
+    }
+    
+    if (pendingCommands.setPower) {
+        setPower(pendingCommands.powerValue);
+        pendingCommands.setPower = false;
+        pendingCommands.powerValue = 0;
+    }
+    
+    if (pendingCommands.setSpring) {
+        changeIdleSpringStrength(pendingCommands.springValue);
+        pendingCommands.setSpring = false;
+        pendingCommands.springValue = 0;
+    }
+    
+    if (pendingCommands.setMaxAngle) {
+        setMaxDegrees(pendingCommands.maxAngleValue);
+        pendingCommands.setMaxAngle = false;
+        pendingCommands.maxAngleValue = 0;
+    }
 }

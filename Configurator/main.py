@@ -3,8 +3,12 @@ import hid
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTextEdit, QSlider, QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QPixmap, QTransform
+from config_commands import *
 
 class HIDControllerApp(QWidget):
+    DEVICE_VID = 0x1209  # 4617 in decimal
+    DEVICE_PID = 0xFFB0  # 65456 in decimal
+
     def __init__(self):
         super().__init__()
         self.device = None  # Variable to store device connection
@@ -30,14 +34,14 @@ class HIDControllerApp(QWidget):
         connection_layout.addWidget(self.vid_label)
 
         self.vid_input = QLineEdit()
-        self.vid_input.setPlaceholderText("e.g. 1155")
+        self.vid_input.setText(str(self.DEVICE_VID))
         connection_layout.addWidget(self.vid_input)
 
         self.pid_label = QLabel("Enter PID (Decimal):")
         connection_layout.addWidget(self.pid_label)
 
         self.pid_input = QLineEdit()
-        self.pid_input.setPlaceholderText("e.g. 22352")
+        self.pid_input.setText(str(self.DEVICE_PID))
         connection_layout.addWidget(self.pid_input)
 
         self.connect_button = QPushButton("Connect")
@@ -54,6 +58,20 @@ class HIDControllerApp(QWidget):
         self.configurator_widget = QWidget(self)
         self.configurator_widget.hide()  # Initially hide this interface
         configurator_layout = QVBoxLayout(self.configurator_widget)
+
+        # Add Initialize and Set center position buttons in top right corner
+        top_layout = QHBoxLayout()
+        top_layout.addStretch()  # This pushes the buttons to the right
+        
+        self.initialize_button = QPushButton("Initialize")
+        self.initialize_button.setFixedSize(100, 30)  # Set fixed size for the button
+        
+        self.set_center_button = QPushButton("Set center position")
+        self.set_center_button.setFixedSize(150, 30)  # Set fixed width for the button
+        
+        top_layout.addWidget(self.set_center_button)
+        top_layout.addWidget(self.initialize_button)
+        configurator_layout.addLayout(top_layout)
 
         # Creating graphical view for the steering wheel
         self.graphics_view = QGraphicsView(self)
@@ -168,6 +186,7 @@ class HIDControllerApp(QWidget):
         # Display device feedback
         self.feedback_display = QTextEdit()
         self.feedback_display.setReadOnly(True)
+        self.feedback_display.setFixedHeight(150)  # Set fixed height to 150
         self.feedback_display.setPlaceholderText("Device feedback will appear here...")
         configurator_layout.addWidget(self.feedback_display)
 
@@ -176,6 +195,10 @@ class HIDControllerApp(QWidget):
         # Timer for receiving HID data
         self.feedback_timer = QTimer()
         self.feedback_timer.timeout.connect(self.receive_feedback)
+
+        # Connect button signals
+        self.initialize_button.clicked.connect(self.initialize_device)
+        self.set_center_button.clicked.connect(self.set_center_position)
 
     def show_connection_ui(self):
         """Shows the connection interface."""
@@ -212,18 +235,37 @@ class HIDControllerApp(QWidget):
             return
 
         try:
-            report = self.device.read(16)  # Timeout in milliseconds
-            if report:
-                # Process report
-                x_value = int.from_bytes(report[1:3], byteorder="little", signed=True)
-                self.x_slider.setValue(x_value)
+            # Read report - max size is 21 bytes (1 for report ID, 20 for data in case of response command)
+            report = self.device.read(21)
+            if not report:
+                return
+            print(report)
+            # Handle different report types based on report ID
+            report_id = report[0]
 
-                # Calculate angle
-                angle = (x_value / 32767) * (self.max_rotation / 2)
-                self.angle_label.setText(f"Angle: {angle:.1f}°")
-                
-                # Rotate steering wheel image
-                self.wheel_item.setRotation(angle)
+            if report_id == REPORT_ID_WHEEL:  # Wheel position report
+                if len(report) >= 3:  # 1 byte report ID + 2 bytes axis position
+                    x_value = int.from_bytes(report[1:3], byteorder="little", signed=True)
+                    self.x_slider.setValue(x_value)
+
+                    # Calculate angle
+                    angle = (x_value / 32767) * (self.max_rotation / 2)
+                    self.angle_label.setText(f"Angle: {angle:.1f}°")
+                    
+                    # Rotate steering wheel image
+                    self.wheel_item.setRotation(angle)
+
+            elif report_id == REPORT_ID_RESPONSE:  # Command response report
+                if len(report) >= 2:  # At least report ID and status
+                    response_text = ""
+                    # Convert remaining bytes to ASCII, stopping at null terminator
+                    for b in report[1:]:
+                        if b == 0:
+                            break
+                        response_text += chr(b)
+                    
+                    if response_text:
+                        self.feedback_display.append(f"Device response: {response_text}")
 
         except Exception as e:
             self.feedback_display.append(f"Error reading feedback: {e}")
@@ -252,6 +294,18 @@ class HIDControllerApp(QWidget):
         """Update max rotation from the slider."""
         self.max_rotation = self.max_rotation_slider.value()
         self.max_rotation_input.setText(str(self.max_rotation))
+        self.send_max_rotation_to_device(self.max_rotation)
+
+    def send_max_rotation_to_device(self, max_rotation):
+        """Send max rotation value to device."""
+        if self.device:
+            try:
+                # Convert max_rotation to bytes (little-endian)
+                max_rotation_bytes = max_rotation.to_bytes(2, byteorder='little')
+                self.send_command(CMD_SET_MAX_ANGLE, max_rotation_bytes)
+                self.feedback_display.append("Sending set max angle command successful")
+            except Exception as e:
+                self.feedback_display.append("Sending set max angle command failed")
 
     def update_power_from_input(self):
         """Update power from the input field."""
@@ -277,14 +331,12 @@ class HIDControllerApp(QWidget):
         """Send power value to device."""
         if self.device:
             try:
-                # Send power setting command to device
-                # Assuming first byte is command (e.g., 0x02 for power setting)
-                # and next 2 bytes are power value in little-endian
+                # Convert to 4 bytes
                 power_bytes = power.to_bytes(2, byteorder='little')
-                report = [0x02] + list(power_bytes) + [0] * 13  # Pad to 16 bytes
-                self.device.write(bytes(report))
+                self.send_command(CMD_SET_POWER, power_bytes)
+                self.feedback_display.append("Sending set power command successful")
             except Exception as e:
-                self.feedback_display.append(f"Error setting power: {e}")
+                self.feedback_display.append("Sending set power command failed")
 
     def update_idle_spring_from_input(self):
         """Update idle spring from the input field."""
@@ -309,20 +361,58 @@ class HIDControllerApp(QWidget):
     def send_idle_spring_to_device(self, idle_spring):
         """Send idle spring value to device."""
         if self.device:
-            try:
-                # Send idle spring setting command to device
-                # Assuming first byte is command (e.g., 0x03 for idle spring setting)
-                # and next byte is the idle spring value
-                report = [0x03, idle_spring] + [0] * 14  # Pad to 16 bytes
-                self.device.write(bytes(report))
-            except Exception as e:
-                self.feedback_display.append(f"Error setting idle spring: {e}")
+            if self.send_command(CMD_SET_SPRING, idle_spring):
+                self.feedback_display.append("Sending set spring command successful")
+            else:
+                self.feedback_display.append("Sending set spring command failed")
 
     def closeEvent(self, event):
         """Closes HID connection when closing the application."""
         if self.device:
             self.device.close()
         event.accept()
+
+    def send_command(self, cmd, data=None):
+        """Send a command to the device and wait for response."""
+        if not self.device:
+            self.feedback_display.append("Error: Device not connected")
+            return False
+
+        try:
+            report = [REPORT_ID_CONFIG, cmd]  # Report ID (0x14), command
+            if data:
+                # Add the length of the data array as the next byte in the report
+                report.append(len(data))  # Data length
+                
+                # Add all bytes from the data array to the end of the report
+                # This contains the actual payload/parameters for the command
+                report.extend(data)
+            else:
+                report.append(0)  # No data
+                
+            # Pad to 4 bytes
+            report.extend([0] * (4 - len(report)))
+            
+            result = self.device.write(report)
+            print("Send ", result, " ", report)
+            return True  # Return True if write was successful
+        except Exception as e:
+            self.feedback_display.append(f"Error sending command: {e}")
+            return False
+
+    def initialize_device(self):
+        """Initialize the device."""
+        if self.send_command(CMD_INITIALIZE):
+            self.feedback_display.append("Sending initialize command successful")
+        else:
+            self.feedback_display.append("Sending initialize command failed")
+
+    def set_center_position(self):
+        """Set the center position."""
+        if self.send_command(CMD_SET_CENTER):
+            self.feedback_display.append("Sending set center command successful")
+        else:
+            self.feedback_display.append("Sending set center command failed")
 
 
 if __name__ == "__main__":

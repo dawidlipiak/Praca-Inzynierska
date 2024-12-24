@@ -23,12 +23,10 @@
 #include "usb_device.h"
 #include "gpio.h"
 
-#include <TMC4671_controller.h>
 #include <AxisWheel.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,7 +47,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-AxisWheel axisWheel;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +57,15 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+// void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+// {
+// 	if(htim->Instance == TIM10)
+// 	{
+//     HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
+//   	AxisWheel::getInstance().processCommands();
+// 		AxisWheel::getInstance().updateDriverTorque();
+// 	}
+// }
 /* USER CODE END 0 */
 
 /**
@@ -96,6 +101,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim10);
   HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_CLIP_GPIO_Port, LED_CLIP_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET);
@@ -105,18 +111,20 @@ int main(void)
   HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET);
   HAL_Delay(100);
   /* USER CODE END 2 */
-  axisWheel.setupTMC4671();
-  HAL_TIM_Base_Start_IT(&htim10);
-//  HAL_TIM_Base_Start_IT(&htim10);
-
+  // AxisWheel::getInstance().setupTMC4671();
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	HAL_Delay(1);
+    static uint32_t lastProcessTime = 0;
+    uint32_t currentTime = HAL_GetTick();
+    if(currentTime - lastProcessTime >= 1) { // 1ms delay
+        AxisWheel::getInstance().processCommands();
+        AxisWheel::getInstance().updateDriverTorque();
+        lastProcessTime = currentTime;
+    }
+	// HAL_Delay(1);
     /* USER CODE END WHILE */
-	  HAL_Delay(1);
-	  axisWheel.updateDriverTorque();
 //	  tmc4671.periodicJob();
     /* USER CODE BEGIN 3 */
   }
@@ -173,16 +181,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim->Instance == TIM10)
 	{
-		static uint32_t counter = 1;
-		if(counter%2000 == 0){
-			// HAL_GPIO_TogglePin(LED_SYS_GPIO_Port, LED_SYS_Pin);
-//			tmc4671.setMoveBy(true, 90);
-		}
-		if(counter == UINT32_MAX - 1){
-			counter = 0;
-		}
-		counter++;
-//		tmc4671.periodicJob();
+
 	}
 }
 /* USER CODE END 4 */

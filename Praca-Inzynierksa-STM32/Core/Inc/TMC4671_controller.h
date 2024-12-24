@@ -197,7 +197,7 @@ private:
 	uint8_t bbmH				= 50;
 	uint16_t brakeLimLow 		= 50700;
 	uint16_t brakeLimHigh 		= 50900;
-	int16_t initPower 			= 7000; // Default current in setup routines ~ 7A
+	int16_t initPower 			= 6000; // Default current in setup routines
 	StatusFlags statusFlags 	= {0};
 	StatusFlags statusMask 		= {0};
 	volatile bool moveFlag		= false;

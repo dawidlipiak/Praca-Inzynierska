@@ -173,7 +173,7 @@ void TMC4671_Driver::turn(int16_t power) {
 	// int32_t flux = 0;
 	
 
-	// setFluxTorque(0, power);
+	setFluxTorque(0, power);
 	// setTargetVelocity(power/2);
 }
 
@@ -275,7 +275,7 @@ EncoderType TMC4671_Driver::getEncoderType(){
 
 void TMC4671_Driver::setTorqueLimit(uint16_t limit){
 	this->pidLimits.pid_torque_flux = limit;
-	initPower = (float)limit*0.75;
+	initPower = limit;
 	tmc4671_writeRegister(TMC4671_PID_TORQUE_FLUX_LIMITS, limit);
 }
 
